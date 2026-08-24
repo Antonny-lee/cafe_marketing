@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('로그인')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: nav}"></nav>
+<main style="max-width:420px;">
+    <h1>로그인</h1>
+
+    <div class="card" th:if="${param.error}" style="border-color:#a8462e; margin-bottom:16px;">
+        <p style="margin:0;">이메일 또는 비밀번호가 올바르지 않습니다.</p>
+    </div>
+    <div class="card" th:if="${param.registered}" style="border-color:#7c4f31; margin-bottom:16px;">
+        <p style="margin:0;">회원가입이 완료됐어요. 로그인해주세요.</p>
+    </div>
+    <div class="card" th:if="${param.logout}" style="margin-bottom:16px;">
+        <p style="margin:0;">로그아웃 됐습니다.</p>
+    </div>
+
+    <div class="card">
+        <form method="post" th:action="@{/login}">
+            <div class="field" style="margin-bottom:12px;">
+                <label class="muted" style="display:block; font-size:12px; margin-bottom:4px;">이메일</label>
+                <input type="text" name="username" required
+                       style="width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:6px;"/>
+            </div>
+            <div class="field" style="margin-bottom:16px;">
+                <label class="muted" style="display:block; font-size:12px; margin-bottom:4px;">비밀번호</label>
+                <input type="password" name="password" required
+                       style="width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:6px;"/>
+            </div>
+            <button type="submit" style="width:100%; padding:12px; border:none; border-radius:6px; background:var(--accent-dark); color:#fff; font-weight:700; cursor:pointer;">
+                로그인
+            </button>
+        </form>
+        <p class="muted" style="margin-top:14px; font-size:13px;">
+            계정이 없으신가요? <a href="/signup" style="color:var(--accent-dark); font-weight:600;">회원가입</a>
+        </p>
+    </div>
+</main>
+</body>
+</html>

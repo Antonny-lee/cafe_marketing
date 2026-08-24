@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('매장 정보')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: nav}"></nav>
+<main>
+    <h1>매장 정보</h1>
+
+    <div class="card" style="margin-bottom:20px;">
+        <h2 th:text="${store.name}">매장명</h2>
+        <p class="muted" th:text="${store.address}">주소</p>
+        <p class="muted" th:text="${store.subwayInfo}">지하철</p>
+        <a class="row-link" th:href="@{'/stores/' + ${store.storeId}}" style="font-size:13px; font-weight:600; display:inline-block; margin-top:8px;">
+            매장 상세 페이지 보기 →
+        </a>
+    </div>
+
+    <div class="card">
+        <h2>사업자 인증</h2>
+        <p class="muted" style="font-size:12.5px; margin-bottom:14px;">
+            국세청 사업자등록 정보로 본인 확인을 하고, 인증 상태를 관리할 수 있어요.
+        </p>
+        <a href="/biz-auth" style="display:inline-block; padding:10px 20px; border:none; border-radius:6px; background:var(--accent-dark); color:#fff; font-weight:700; text-decoration:none;">
+            사업자 인증 →
+        </a>
+    </div>
+</main>
+</body>
+</html>

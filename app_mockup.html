@@ -1,0 +1,2697 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>단골장부 - 소상공인 리뷰 마케팅 앱</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700;900&family=Pretendard:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap');
+
+  :root{
+    --paper: #F6F1E7;
+    --paper-deep: #EFE7D6;
+    --ink: #241D14;
+    --ink-soft: #5C5245;
+    --line: #D8CDB6;
+    --moss: #55643B;
+    --moss-deep: #3E4A2A;
+    --rust: #A8462E;
+    --gold: #B98A2E;
+    --white: #FFFDF8;
+  }
+
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Pretendard','Noto Sans KR', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .app{
+    max-width: 460px;
+    margin: 0 auto;
+    min-height: 100vh;
+    background: var(--paper);
+    background-image:
+      radial-gradient(circle at 1px 1px, rgba(36,29,20,0.06) 1px, transparent 0);
+    background-size: 14px 14px;
+    display:flex;
+    flex-direction:column;
+    box-shadow: 0 0 60px rgba(0,0,0,0.08);
+  }
+
+  /* ---------- Header ---------- */
+  header.top{
+    padding: 22px 20px 14px;
+    border-bottom: 1px solid var(--line);
+    background: var(--paper);
+    position: sticky; top:0; z-index: 10;
+  }
+  .brand{
+    font-family:'Noto Serif KR', serif;
+    font-weight:900;
+    font-size: 22px;
+    letter-spacing: -0.5px;
+    display:flex;
+    align-items:baseline;
+    gap:8px;
+  }
+  .brand small{
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:500;
+    font-size:11px;
+    color: var(--ink-soft);
+    letter-spacing:1px;
+    text-transform:uppercase;
+  }
+  .store-pill{
+    margin-top:10px;
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding: 5px 12px 5px 8px;
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    font-size:12.5px;
+    color: var(--ink-soft);
+  }
+  .store-pill .dot{width:6px;height:6px;border-radius:50%;background:var(--moss);}
+  .store-pill b{color:var(--ink); font-weight:600;}
+
+  /* ---------- Tabs ---------- */
+  nav.tabs.bottom-tabs{
+    display:flex;
+    border-top: 1px solid var(--line);
+    background: var(--paper);
+    position: sticky; bottom:0; z-index:9;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+    box-shadow: 0 -4px 14px rgba(36,29,20,0.06);
+  }
+  nav.tabs button{
+    flex:1;
+    padding: 11px 2px 9px;
+    background:none;
+    border:none;
+    font-family:'Pretendard',sans-serif;
+    font-size:11.5px;
+    font-weight:600;
+    color: var(--ink-soft);
+    cursor:pointer;
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:4px;
+    transition: color .15s ease;
+  }
+  nav.tabs button .num{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    color: var(--line);
+  }
+  nav.tabs button.active{ color: var(--ink); }
+  nav.tabs button.active .num{ color: var(--gold); }
+  nav.tabs button.active::after{
+    content:"";
+    position:absolute; top:-12px; left:14%; right:14%;
+    height:2px; background: var(--ink);
+  }
+
+  main{ flex:1; padding: 20px 18px 24px; }
+  .screen{ display:none; animation: fadeIn .25s ease; }
+  .screen.active{ display:block; }
+  @keyframes fadeIn{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);} }
+
+  .section-label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 8px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .section-label::after{ content:""; flex:1; height:1px; background: var(--line); }
+
+  /* ---------- Receipt card (signature element) ---------- */
+  .receipt{
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 22px 20px 18px;
+    position: relative;
+    margin-bottom: 22px;
+  }
+  .receipt::before, .receipt::after{
+    content:"";
+    position:absolute; left:0; right:0; height:8px;
+    background:
+      radial-gradient(circle at 8px 4px, transparent 5px, var(--paper) 5.5px) repeat-x;
+    background-size: 16px 8px;
+  }
+  .receipt::before{ top:-4px; }
+  .receipt::after{ bottom:-4px; transform: rotate(180deg); }
+
+  .receipt-head{
+    display:flex; justify-content:space-between; align-items:flex-start;
+    padding-bottom: 14px; margin-bottom:14px;
+    border-bottom: 1px dashed var(--line);
+  }
+  .receipt-head h2{
+    font-family:'Noto Serif KR', serif;
+    font-size: 16px; font-weight:700;
+  }
+  .receipt-head span{ font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--ink-soft); }
+
+  .receipt-row{
+    display:flex; justify-content:space-between; align-items:center;
+    padding: 7px 0;
+    font-size: 13.5px;
+  }
+  .receipt-row .label{ color: var(--ink-soft); }
+  .receipt-row .amt{ font-family:'IBM Plex Mono', monospace; font-weight:600; }
+  .amt.up{ color: var(--moss-deep); }
+  .amt.down{ color: var(--rust); }
+
+  .receipt-total{
+    margin-top: 12px; padding-top: 14px;
+    border-top: 1px dashed var(--line);
+    display:flex; justify-content:space-between; align-items:baseline;
+  }
+  .receipt-total .t-label{ font-size:13px; font-weight:600; }
+  .receipt-total .t-amt{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 22px; font-weight:700; color: var(--moss-deep);
+  }
+  .receipt-total .t-amt small{ font-size:12px; font-weight:500; color:var(--ink-soft); }
+
+  .stamp{
+    position:absolute; right:18px; top:18px;
+    width:52px; height:52px; border-radius:50%;
+    border: 1.5px solid var(--rust);
+    color: var(--rust);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Noto Serif KR', serif;
+    font-weight:900; font-size:11px;
+    transform: rotate(-12deg);
+    opacity:0.85;
+    text-align:center; line-height:1.2;
+  }
+
+  /* ---------- AI briefing strip ---------- */
+  .briefing{
+    background: var(--ink);
+    color: var(--paper);
+    border-radius: 8px;
+    padding: 15px 16px;
+    margin-bottom: 22px;
+    display:flex;
+    gap:12px;
+    align-items:flex-start;
+  }
+  .briefing .ic{
+    font-family:'Noto Serif KR',serif; font-weight:900; font-size:14px;
+    background: var(--gold); color:var(--ink);
+    width:26px;height:26px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+  }
+  .briefing p{ font-size: 13px; line-height:1.55; }
+  .briefing .tag{ font-family:'IBM Plex Mono',monospace; font-size:10px; color:#C9BFA6; display:block; margin-bottom:4px; letter-spacing:1px; }
+
+  /* ---------- Today card ---------- */
+  .today-card{
+    background: var(--white); border:1px solid var(--line); border-radius:8px;
+    padding:16px; margin-bottom:22px;
+  }
+  .today-main{ display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px; }
+  .today-amt{ font-family:'IBM Plex Mono',monospace; font-size:26px; font-weight:700; color:var(--ink); }
+  .today-amt small{ font-size:13px; font-weight:500; color:var(--ink-soft); margin-left:2px; }
+  .today-badges{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
+  .today-badge{
+    font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600;
+    padding:4px 9px; border-radius:999px; white-space:nowrap;
+  }
+  .today-badge.up{ background:#E7EDDD; color:var(--moss-deep); }
+  .today-badge.down{ background:#F3E1DA; color:var(--rust); }
+  .today-sub{ font-size:12px; color:var(--ink-soft); display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .today-sub b{ color:var(--ink); font-weight:600; }
+  .today-sub .divider{ color:var(--line); }
+  .today-sub .today-time{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; margin-left:auto; }
+
+  /* ---------- Pace / YoY cards ---------- */
+  .pace-card, .yoy-card{
+    background: var(--white); border:1px solid var(--line); border-radius:8px;
+    padding:16px; margin-bottom:22px;
+  }
+  .pace-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
+  .pace-label{ font-size:11.5px; color:var(--ink-soft); margin-bottom:4px; }
+  .pace-amt{ font-family:'IBM Plex Mono',monospace; font-size:20px; font-weight:700; color:var(--ink); }
+  .pace-amt small{ font-size:12px; font-weight:500; color:var(--ink-soft); margin-left:2px; }
+
+  .pace-bars{ display:flex; flex-direction:column; gap:12px; }
+  .pace-bar-row{ display:grid; grid-template-columns: 96px 1fr 74px; align-items:center; gap:10px; }
+  .pb-label{ font-size:11px; color:var(--ink-soft); }
+  .pb-amt{ font-family:'IBM Plex Mono',monospace; font-size:11.5px; font-weight:600; text-align:right; }
+
+  .yoy-note{
+    margin-top:14px; padding-top:12px; border-top:1px dashed var(--line);
+    font-size:12px; color:var(--ink-soft); line-height:1.6;
+  }
+  .yoy-note b{ color:var(--moss-deep); }
+
+  .history-link{
+    text-align:center; font-size:12.5px; font-weight:600; color:var(--ink-soft);
+    padding:12px; border:1px dashed var(--line); border-radius:8px; margin-bottom:22px; cursor:pointer;
+  }
+  .hl-arrow{ margin-left:2px; }
+
+  /* ---------- History sub-screen ---------- */
+  .history-head{ display:flex; align-items:center; gap:12px; margin-bottom:18px; }
+  .back-btn{
+    width:30px; height:30px; border-radius:50%; border:1px solid var(--line); background:var(--white);
+    font-size:14px; color:var(--ink); cursor:pointer; flex-shrink:0;
+  }
+  .history-title{ font-family:'Noto Serif KR',serif; font-weight:700; font-size:16px; }
+
+  .hist-view{ margin-top:16px; }
+  .hist-table{ width:100%; border-collapse:collapse; background:var(--white); border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+  .hist-table th{
+    font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:var(--ink-soft); font-weight:600;
+    text-align:right; padding:9px 8px; background:var(--paper-deep); letter-spacing:0.3px;
+  }
+  .hist-table th:first-child, .hist-table td:first-child{ text-align:left; }
+  .hist-table td{
+    font-family:'IBM Plex Mono',monospace; font-size:11.5px; text-align:right; padding:9px 8px;
+    border-top:1px dashed var(--line);
+  }
+  .hist-table tr.best td{ background:#FBF0D6; font-weight:700; }
+  .hist-table td.up{ color:var(--moss-deep); }
+  .hist-table td.down{ color:var(--rust); }
+  .hist-note{ font-size:11.5px; color:var(--ink-soft); line-height:1.6; margin-top:12px; padding:10px 12px; background:var(--paper-deep); border-radius:6px; }
+
+  /* ---------- Store pill link ---------- */
+  .store-pill-arrow{ margin-left:4px; color:var(--ink-soft); font-size:14px; }
+
+  /* ---------- Biz verification ---------- */
+  .biz-desc{ font-size:12.5px; color:var(--ink-soft); line-height:1.6; margin-bottom:18px; }
+  .verify-result{
+    background:var(--white); border:1px solid var(--line); border-radius:8px;
+    padding:26px 20px 20px; text-align:center;
+  }
+  .vr-check{
+    width:52px; height:52px; border-radius:50%; background:var(--moss-deep); color:var(--white);
+    font-size:24px; display:flex; align-items:center; justify-content:center; margin:0 auto 14px;
+  }
+  .vr-title{ font-family:'Noto Serif KR',serif; font-weight:700; font-size:16px; margin-bottom:4px; }
+  .vr-sub{ font-size:11.5px; color:var(--ink-soft); margin-bottom:18px; }
+  .vr-detail{ text-align:left; border-top:1px dashed var(--line); padding-top:14px; margin-bottom:18px; }
+  .vr-row{ display:flex; justify-content:space-between; padding:6px 0; font-size:12.5px; }
+  .vr-label{ color:var(--ink-soft); }
+  .vr-val{ font-weight:600; }
+  .vr-val.ok{ color:var(--moss-deep); }
+  .vr-val.mono{ font-family:'IBM Plex Mono',monospace; font-size:11.5px; }
+
+  /* ---------- Login screen ---------- */
+  .login-screen{
+    position:fixed; inset:0; z-index:200; background:var(--paper);
+    background-image: radial-gradient(circle at 1px 1px, rgba(36,29,20,0.06) 1px, transparent 0);
+    background-size:14px 14px;
+    max-width:460px; margin:0 auto;
+    display:flex; flex-direction:column; justify-content:center;
+    padding:32px 28px; opacity:1; transition:opacity .2s ease, visibility .2s ease;
+  }
+  .login-screen.hidden{ opacity:0; visibility:hidden; pointer-events:none; }
+  .login-brand{ text-align:center; margin-bottom:44px; }
+  .login-mark{
+    width:56px; height:56px; border-radius:16px; background:var(--ink); color:var(--gold);
+    font-family:'Noto Serif KR',serif; font-weight:900; font-size:26px;
+    display:flex; align-items:center; justify-content:center; margin:0 auto 16px;
+  }
+  .login-title{ font-family:'Noto Serif KR',serif; font-weight:900; font-size:24px; margin-bottom:10px; }
+  .login-tagline{ font-size:13px; color:var(--ink-soft); line-height:1.6; }
+  .login-alt{ text-align:center; font-size:12px; color:var(--ink-soft); margin-top:16px; cursor:pointer; }
+  .login-alt b{ color:var(--ink); }
+
+  /* ---------- CSV column mapping ---------- */
+  .file-info-card{
+    background:var(--white); border:1px solid var(--line); border-radius:8px;
+    padding:14px 16px; margin-bottom:18px; display:flex; align-items:center; gap:12px;
+  }
+  .fi-ic{ font-size:20px; }
+  .fi-name{ font-size:13px; font-weight:700; }
+  .fi-sub{ font-size:11px; color:var(--ink-soft); margin-top:2px; }
+  .preview-scroll{ overflow-x:auto; margin-bottom:14px; border-radius:8px; }
+  .preview-table{ min-width:480px; }
+  .mapping-note{
+    font-size:11.5px; color:var(--ink-soft); line-height:1.6;
+    background:#FBF0D6; padding:11px 13px; border-radius:6px; margin-bottom:20px;
+  }
+
+  .upload-zone{
+    background:var(--white); border:1.5px dashed var(--line); border-radius:10px;
+    padding:36px 20px; text-align:center; cursor:pointer; margin-bottom:18px;
+  }
+  .uz-ic{
+    width:40px; height:40px; border-radius:50%; background:var(--paper-deep); color:var(--ink-soft);
+    display:flex; align-items:center; justify-content:center; margin:0 auto 12px; font-size:16px;
+  }
+  .uz-title{ font-size:13px; font-weight:600; margin-bottom:5px; }
+  .uz-sub{ font-size:11px; color:var(--ink-soft); margin-bottom:16px; }
+  .uz-btn{
+    border:1px solid var(--ink); background:none; color:var(--ink);
+    padding:8px 18px; border-radius:999px; font-size:12px; font-weight:600; cursor:pointer;
+  }
+
+  /* ---------- P/L summary strip (장부 탭 상단) ---------- */
+  .pl-strip{
+    display:flex; align-items:center; background:var(--white); border:1px solid var(--line);
+    border-radius:8px; padding:14px 8px; margin-bottom:16px;
+  }
+  .pl-col{ flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; }
+  .pl-div{ width:1px; height:32px; background:var(--line); flex-shrink:0; }
+  .pl-label{ font-size:10.5px; color:var(--ink-soft); display:flex; align-items:center; gap:5px; }
+  .pl-amt{ font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:600; color:var(--ink); }
+  .pl-amt.down{ color:var(--rust); }
+  .pl-amt.up{ color:var(--moss-deep); }
+  .pl-amt.strong{ font-size:15px; }
+  .pl-badge{
+    font-family:'Pretendard',sans-serif; font-size:9px; font-weight:700; color:var(--white);
+    background:var(--moss-deep); padding:1px 6px; border-radius:999px;
+  }
+  .delete-btn{
+    width:100%; padding:12px; border:1px solid var(--rust); border-radius:6px;
+    background:none; color:var(--rust); font-weight:600; font-size:13px; cursor:pointer; margin-top:8px;
+  }
+  .quick-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:24px; }
+  .quick-btn{
+    background: var(--white); border:1px solid var(--line); border-radius:8px;
+    padding: 14px 12px; text-align:left; cursor:pointer;
+  }
+  .quick-btn .qi{ font-size:18px; margin-bottom:8px; display:block; }
+  .quick-btn .qt{ font-weight:600; font-size:13px; margin-bottom:2px; }
+  .quick-btn .qs{ font-size:11px; color:var(--ink-soft); }
+
+  /* ---------- Ledger screen ---------- */
+  .sync-card{
+    background: var(--white); border:1px solid var(--line); border-radius:8px;
+    padding:16px; margin-bottom:22px;
+  }
+  .sync-top{ display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+  .sync-status{ display:flex; align-items:center; gap:10px; }
+  .sync-dot{
+    width:9px; height:9px; border-radius:50%; background: var(--moss);
+    box-shadow: 0 0 0 3px rgba(85,100,59,0.15); flex-shrink:0;
+  }
+  .sync-title{ font-size:13.5px; font-weight:700; }
+  .sync-sub{ font-size:11px; color:var(--ink-soft); font-family:'IBM Plex Mono',monospace; margin-top:2px; }
+  .sync-btn{
+    border:1px solid var(--line); background:var(--paper); color:var(--ink-soft);
+    padding:6px 10px; border-radius:999px; font-size:11px; font-weight:600; cursor:pointer; white-space:nowrap;
+  }
+  .sync-figure{
+    padding: 14px 0; border-top:1px dashed var(--line); border-bottom:1px dashed var(--line);
+    display:flex; flex-direction:column; gap:4px; margin-bottom:10px;
+  }
+  .sf-label{ font-size:11.5px; color:var(--ink-soft); }
+  .sf-amt{ font-family:'IBM Plex Mono',monospace; font-size:24px; font-weight:700; color:var(--moss-deep); }
+  .sf-amt small{ font-size:12px; font-weight:500; color:var(--ink-soft); margin-left:2px; }
+  .sync-note{ font-size:11.5px; color:var(--ink-soft); line-height:1.6; }
+
+  .form-card{ background:var(--white); border:1px solid var(--line); border-radius:8px; padding:16px; margin-bottom:20px; }
+  .field{ margin-bottom:12px; }
+  .field label{ display:block; font-size:11.5px; color:var(--ink-soft); margin-bottom:5px; font-weight:600; }
+  .field input, .field select{
+    width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:6px;
+    font-family:'Pretendard',sans-serif; font-size:14px; background:var(--paper);
+  }
+  .submit-btn{
+    width:100%; padding:12px; border:none; border-radius:6px;
+    background:var(--ink); color:var(--paper); font-weight:700; font-size:14px; cursor:pointer;
+  }
+
+  .chip-row{ display:flex; gap:8px; }
+  .chip{
+    padding:8px 14px; border:1px solid var(--line); border-radius:999px;
+    font-size:12.5px; font-weight:600; color:var(--ink-soft); background:var(--paper); cursor:pointer;
+  }
+  .chip.sel{ background:var(--ink); color:var(--paper); border-color:var(--ink); }
+
+  .field-row{ display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; gap:10px; }
+  .check-row{ display:flex; align-items:center; gap:7px; font-size:12.5px; color:var(--ink-soft); font-weight:500; }
+  .check-row input{ width:15px; height:15px; accent-color: var(--moss-deep); }
+  .receipt-btn{
+    border:1px dashed var(--line); background:var(--paper); color:var(--ink-soft);
+    padding:7px 11px; border-radius:6px; font-size:11.5px; cursor:pointer; white-space:nowrap;
+  }
+
+  .li-vendor{ font-weight:400; color:var(--ink-soft); font-size:11.5px; }
+  .pay-tag{
+    display:inline-block; margin-left:6px; padding:1px 7px; border-radius:999px;
+    background:var(--paper-deep); font-size:9.5px; font-family:'Pretendard',sans-serif; font-weight:600; color:var(--ink-soft);
+  }
+
+  .cat-bar-row{ display:grid; grid-template-columns:78px 1fr 34px; align-items:center; gap:10px; margin-bottom:12px; }
+  .cat-bar-row:last-child{ margin-bottom:0; }
+  .cbr-label{ font-size:12px; color:var(--ink-soft); }
+  .cbr-pct{ font-family:'IBM Plex Mono',monospace; font-size:11.5px; font-weight:600; text-align:right; }
+
+  .ledger-item{
+    display:flex; justify-content:space-between; align-items:center;
+    padding: 12px 4px; border-bottom:1px solid var(--line);
+  }
+  .ledger-item:last-child{ border-bottom:none; }
+  .li-left{ display:flex; flex-direction:column; gap:2px; }
+  .li-cat{ font-size:13px; font-weight:600; }
+  .li-date{ font-size:11px; color:var(--ink-soft); font-family:'IBM Plex Mono',monospace; }
+  .li-amt{ font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:14px; }
+
+  /* ---------- Compare screen ---------- */
+  .map-card{ background:var(--white); border:1px solid var(--line); border-radius:8px; padding:12px 12px 10px; margin-bottom:14px; }
+  .map-svg{ width:100%; height:auto; display:block; border-radius:6px; }
+  .map-bg{ fill: var(--paper-deep); }
+  .map-street{ stroke: var(--white); stroke-width:6; }
+  .map-pin{ stroke: var(--white); stroke-width:2.5; }
+  .map-pin.comp{ fill: var(--ink); }
+  .map-pin.mine{ fill: var(--gold); }
+  .map-pin-label{ font-family:'Pretendard',sans-serif; font-size:12px; font-weight:700; fill:var(--white); }
+  .map-pin-label.mine{ font-size:13px; }
+  .map-name{ font-family:'Pretendard',sans-serif; font-size:9.5px; fill:var(--ink-soft); font-weight:600; }
+  .map-name.mine{ fill:var(--ink); font-weight:700; }
+  .map-note{ font-size:10.5px; color:var(--ink-soft); margin-top:8px; text-align:center; }
+
+  .compA-card{ background:var(--white); border:1px solid var(--line); border-radius:8px; padding:15px 16px; margin-bottom:12px; }
+  .compA-head{ display:flex; align-items:flex-start; gap:11px; margin-bottom:12px; }
+  .compA-badge{
+    width:26px; height:26px; border-radius:50%; background:var(--ink); color:var(--paper);
+    font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:12px;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px;
+  }
+  .compA-title{ display:flex; flex-direction:column; gap:3px; }
+  .compA-name{ font-size:13.5px; font-weight:700; }
+  .compA-rating{ font-size:11.5px; color:#B98A2E; font-weight:600; }
+  .compA-count{ color:var(--ink-soft); font-weight:500; }
+  .compA-tags{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
+  .tag-pill{
+    font-size:10.5px; padding:4px 9px; border-radius:999px;
+    background:var(--paper-deep); color:var(--ink-soft); font-weight:600;
+  }
+  .compA-bar-row{ display:grid; grid-template-columns:56px 1fr 40px; align-items:center; gap:10px; }
+
+  /* ---------- Store detail modal ---------- */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(36,29,20,0.45);
+    display:flex; align-items:flex-end; justify-content:center;
+    opacity:0; pointer-events:none; transition:opacity .2s ease; z-index:100;
+  }
+  .modal-overlay.open{ opacity:1; pointer-events:auto; }
+  .modal-sheet{
+    width:100%; max-width:460px; max-height:85vh; overflow-y:auto;
+    background:var(--paper); border-radius:16px 16px 0 0;
+    padding:10px 18px 28px; position:relative;
+    transform:translateY(100%); transition:transform .25s ease;
+  }
+  .modal-overlay.open .modal-sheet{ transform:translateY(0); }
+  .modal-handle{ width:36px; height:4px; background:var(--line); border-radius:2px; margin:6px auto 14px; }
+  .modal-close{
+    position:absolute; top:14px; right:16px; background:var(--white); border:1px solid var(--line);
+    width:28px; height:28px; border-radius:50%; font-size:12px; color:var(--ink-soft); cursor:pointer;
+  }
+  .md-head{ display:flex; align-items:center; gap:12px; margin-bottom:16px; padding-right:30px; }
+  .compA-badge.lg{ width:36px; height:36px; font-size:15px; }
+  .md-name{ font-family:'Noto Serif KR',serif; font-weight:700; font-size:16px; margin-bottom:3px; }
+  .md-briefing{ margin-bottom:18px; }
+  .md-section-label{
+    font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:1.2px; text-transform:uppercase;
+    color:var(--ink-soft); margin:16px 0 8px;
+  }
+  .md-intro{ font-size:12.5px; line-height:1.65; color:var(--ink-soft); margin-bottom:6px; }
+  .md-row{ display:flex; align-items:center; gap:10px; padding:8px 0; font-size:12.5px; border-bottom:1px dashed var(--line); }
+  .md-row:last-child{ border-bottom:none; }
+  .md-ic{ font-size:14px; width:20px; text-align:center; }
+
+  /* ---------- VS comparison strip (경쟁사 모달 내) ---------- */
+  .vs-strip{
+    display:flex; align-items:center; background:var(--paper); border:1px solid var(--line);
+    border-radius:8px; padding:14px 10px; margin-bottom:8px;
+  }
+  .vs-col{ flex:1; display:flex; flex-direction:column; align-items:center; gap:5px; text-align:center; }
+  .vs-label{ font-size:10.5px; color:var(--ink-soft); font-weight:600; }
+  .vs-val{ font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:700; color:var(--ink); }
+  .vs-val small{ font-weight:500; color:var(--ink-soft); font-size:10.5px; }
+  .vs-mid{
+    font-family:'Noto Serif KR',serif; font-weight:900; font-size:12px; color:var(--rust);
+    padding:0 10px; flex-shrink:0;
+  }
+  .vs-delta{ text-align:center; font-size:10.5px; color:var(--ink-soft); margin-bottom:18px; }
+
+  /* ---------- Gap summary (강점/차이점) ---------- */
+  .gap-summary-card{
+    background:var(--white); border:1px solid var(--line); border-radius:8px;
+    padding:15px 16px; margin-bottom:18px;
+  }
+  .gap-block{ padding:9px 0; }
+  .gap-block:first-child{ border-bottom:1px dashed var(--line); margin-bottom:6px; }
+  .gap-label{ font-size:12px; font-weight:700; margin-bottom:6px; }
+  .gap-label.strength{ color:var(--moss-deep); }
+  .gap-label.diff{ color:#8A5A16; }
+  .gap-text{ font-size:12px; line-height:1.6; color:var(--ink-soft); }
+
+  /* ---------- Marketing chatbot ---------- */
+  .chat-screen{
+    display:none; flex-direction:column; height:calc(100vh - 73px - 60px);
+    padding:16px 14px 0 !important;
+  }
+  .chat-screen.active{ display:flex; }
+  .chat-log{ flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:14px; padding-bottom:12px; }
+
+  .chat-row{ display:flex; gap:8px; align-items:flex-start; }
+  .chat-row.user{ justify-content:flex-end; }
+  .chat-avatar{
+    width:24px; height:24px; border-radius:50%; background:var(--gold); color:var(--ink);
+    font-family:'Noto Serif KR',serif; font-weight:900; font-size:10px;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:2px;
+  }
+  .chat-bubble{
+    max-width:82%; padding:11px 14px; border-radius:14px; font-size:12.5px; line-height:1.6;
+  }
+  .chat-bubble.bot{ background:var(--white); border:1px solid var(--line); border-top-left-radius:4px; color:var(--ink); }
+  .chat-bubble.user{ background:var(--ink); color:var(--paper); border-top-right-radius:4px; }
+  .chat-source{
+    font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:var(--ink-soft);
+    background:var(--paper-deep); padding:6px 8px; border-radius:5px; margin-bottom:8px; line-height:1.5;
+  }
+  .chat-tone-tabs{ margin:10px 0 10px; }
+  .chat-copy-card{ margin:0; }
+
+  .chat-quick-row{
+    display:flex; gap:7px; overflow-x:auto; padding:10px 0; flex-shrink:0;
+  }
+  .chat-chip{
+    white-space:nowrap; font-size:11.5px; font-weight:600; color:var(--ink-soft);
+    background:var(--white); border:1px solid var(--line); border-radius:999px;
+    padding:7px 13px; cursor:pointer; flex-shrink:0;
+  }
+  .chat-input-row{
+    display:flex; gap:8px; padding:10px 0 14px; flex-shrink:0; border-top:1px solid var(--line);
+  }
+  .chat-input-row input{
+    flex:1; padding:11px 14px; border:1px solid var(--line); border-radius:999px;
+    font-family:'Pretendard',sans-serif; font-size:13px; background:var(--white);
+  }
+  .chat-send-btn{
+    width:40px; height:40px; border-radius:50%; border:none; background:var(--gold);
+    color:var(--ink); font-size:16px; font-weight:900; cursor:pointer; flex-shrink:0;
+  }
+  .score-card{
+    background: var(--white); border:1px solid var(--line); border-radius:8px;
+    padding:20px 16px; margin-bottom:14px;
+    display:flex; align-items:center; gap:18px;
+  }
+  .donut-wrap{ position:relative; width:112px; height:112px; flex-shrink:0; }
+  .donut{
+    width:100%; height:100%; border-radius:50%;
+    background: conic-gradient(var(--line) 0deg 360deg);
+  }
+  .donut-hole{
+    position:absolute; inset:12px; border-radius:50%; background:var(--white);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+  }
+  .donut-num{ font-family:'IBM Plex Mono',monospace; font-size:19px; font-weight:700; color:var(--ink); }
+  .donut-num small{ font-size:10px; font-weight:500; color:var(--ink-soft); margin-left:1px; }
+  .donut-sub{ font-size:10px; color:var(--ink-soft); margin-top:2px; }
+
+  .score-side{ flex:1; display:flex; flex-direction:column; gap:8px; }
+  .score-row{ display:flex; align-items:center; gap:7px; font-size:12px; }
+  .sr-dot{ width:8px;height:8px;border-radius:50%; flex-shrink:0; }
+  .sr-dot.pos{ background: var(--moss-deep); }
+  .sr-dot.neg{ background: var(--rust); }
+  .sr-label{ color:var(--ink-soft); flex:1; }
+  .sr-val{ font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--ink-soft); }
+  .score-note{ font-size:10.5px; color:var(--ink-soft); line-height:1.5; margin-top:4px; padding-top:8px; border-top:1px dashed var(--line); }
+
+  .peer-card{
+    background: var(--white); border:1px solid var(--line); border-radius:8px;
+    padding:16px; margin-bottom:22px;
+  }
+  .peer-row{ display:flex; justify-content:space-between; align-items:center; padding:5px 0; font-size:12.5px; }
+  .peer-label{ color:var(--ink-soft); }
+  .peer-val{ font-family:'IBM Plex Mono',monospace; font-weight:600; }
+  .peer-val.us{ color: var(--moss-deep); }
+  .peer-badge{
+    margin-top:10px; padding:9px 12px; background:#EFE0C6; color:#8A5A16;
+    border-radius:6px; font-size:12.5px; text-align:center; font-weight:600;
+  }
+  .peer-note{ margin-top:10px; font-size:10.5px; color:var(--ink-soft); line-height:1.5; }
+
+  /* ---------- Strength hero (우리 매장 강점 프로필) ---------- */
+  .strength-hero{
+    background: var(--white); border:1px solid var(--line); border-radius:8px;
+    padding:18px 16px; margin-bottom:14px;
+  }
+  .sh-top{ display:flex; align-items:baseline; gap:8px; margin-bottom:14px; }
+  .sh-rating{ font-family:'IBM Plex Mono',monospace; font-size:16px; font-weight:700; color:#B98A2E; }
+  .sh-count{ font-size:11px; color:var(--ink-soft); }
+  .sh-keywords{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .sh-kw-item{
+    display:flex; align-items:center; gap:9px; background:var(--paper);
+    border:1px solid var(--line); border-radius:8px; padding:10px 10px;
+  }
+  .sh-kw-ic{ font-size:17px; flex-shrink:0; }
+  .sh-kw-text{ display:flex; flex-direction:column; gap:1px; min-width:0; }
+  .sh-kw-name{ font-size:11.5px; font-weight:700; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .sh-kw-count{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--moss-deep); font-weight:600; }
+
+  /* ---------- Word cloud & deep insight cards ---------- */
+  .wordcloud-card{
+    background:var(--white); border:1px solid var(--line); border-radius:8px;
+    padding:18px 16px; margin-bottom:14px;
+  }
+  .wc-label{ font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:1px; color:var(--ink-soft); margin-bottom:14px; }
+  .wc-cloud{
+    position:relative; height:190px; width:100%;
+    padding-bottom:16px; border-bottom:1px dashed var(--line); margin-bottom:12px;
+    overflow:hidden;
+  }
+  .wc-w{ position:absolute; font-family:'Noto Serif KR',serif; font-weight:700; line-height:1; white-space:nowrap; }
+  .wc-note{ font-size:11.5px; color:var(--ink-soft); line-height:1.6; }
+
+  .insight-card{
+    background:var(--white); border:1px solid var(--line); border-radius:8px;
+    padding:16px; margin-bottom:14px;
+  }
+  .insight-head{ display:flex; gap:10px; align-items:flex-start; margin-bottom:14px; padding-bottom:14px; border-bottom:1px dashed var(--line); }
+  .insight-ic{ font-size:16px; margin-top:1px; }
+  .insight-title{ font-size:13px; font-weight:700; margin-bottom:2px; }
+  .insight-sub{ font-size:11px; color:var(--ink-soft); }
+  .insight-item{ padding:10px 0; border-bottom:1px dashed var(--line); }
+  .insight-item:last-child{ border-bottom:none; padding-bottom:0; }
+  .insight-quote{ font-size:12.5px; color:var(--ink); line-height:1.55; font-style:italic; margin-bottom:6px; }
+  .insight-action{ font-size:11.5px; color:var(--moss-deep); font-weight:600; }
+
+  /* ---------- Real review cards ---------- */
+  .review-list{ display:flex; flex-direction:column; gap:10px; margin-bottom:14px; }
+  .review-card{
+    background:var(--white); border:1px solid var(--line); border-radius:8px; padding:14px 15px;
+  }
+  .review-card.flagged{ border-color:#E3C077; background:#FFFCF5; }
+  .rc-top{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px; flex-wrap:wrap; gap:4px; }
+  .rc-rating{ font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:700; color:#B98A2E; }
+  .rc-rating.dim{ color:var(--ink-soft); font-size:11px; font-weight:600; }
+  .rc-meta{ font-size:10.5px; color:var(--ink-soft); }
+  .rc-text{ font-size:12.5px; line-height:1.6; color:var(--ink); margin-bottom:10px; }
+  .rc-tags{ display:flex; flex-wrap:wrap; gap:5px; margin-bottom:8px; }
+  .rc-date{ font-size:10.5px; color:var(--ink-soft); font-family:'IBM Plex Mono',monospace; }
+  .rc-flag{
+    font-family:'Pretendard',sans-serif; font-weight:700; color:#8A5A16; background:#FBF0D6;
+    padding:2px 7px; border-radius:999px; margin-left:6px; font-size:9.5px;
+  }
+
+  /* ---------- Refresh button & load more ---------- */
+  .history-head{ position:relative; }
+  .refresh-btn{
+    margin-left:auto; display:flex; align-items:center; gap:5px;
+    border:1px solid var(--line); background:var(--white); color:var(--ink-soft);
+    padding:6px 12px; border-radius:999px; font-size:11.5px; font-weight:600; cursor:pointer;
+  }
+  .refresh-btn.spinning #refreshIcon{ display:inline-block; animation:spin 0.8s linear infinite; }
+  @keyframes spin{ from{transform:rotate(0deg);} to{transform:rotate(360deg);} }
+  .refresh-status{
+    font-size:11px; color:var(--ink-soft); background:var(--paper-deep);
+    padding:9px 12px; border-radius:6px; margin-bottom:14px;
+  }
+  .refresh-status b{ color:var(--ink); }
+  .load-more-btn{
+    width:100%; padding:12px; margin-top:6px; border:1px dashed var(--line); border-radius:8px;
+    background:var(--white); color:var(--ink-soft); font-size:12.5px; font-weight:600; cursor:pointer;
+  }
+  .review-card.new-flash{ animation: flashNew 1.6s ease; }
+  @keyframes flashNew{ 0%{ background:#FBF0D6; } 100%{ background:var(--white); } }
+
+  .compare-card{ background:var(--white); border:1px solid var(--line); border-radius:8px; padding:16px; margin-bottom:14px; }
+  .compare-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+  .compare-head h3{ font-family:'Noto Serif KR',serif; font-size:14.5px; font-weight:700; }
+  .badge{ font-family:'IBM Plex Mono',monospace; font-size:10px; padding:3px 8px; border-radius:999px; }
+  .badge.ours{ background: var(--moss); color:var(--white); }
+  .badge.warn{ background:#EFE0C6; color:#8A5A16; }
+
+  .bar-row{ margin-bottom:10px; }
+  .bar-row-top{ display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px; }
+  .bar-row-top .nm{ color:var(--ink-soft); }
+  .bar-track{ height:8px; background:var(--paper-deep); border-radius:4px; overflow:hidden; }
+  .bar-fill{ height:100%; border-radius:4px; }
+  .bar-fill.us{ background: var(--moss-deep); }
+  .bar-fill.comp{ background: #B8AC8E; }
+
+  .gap-highlight{
+    margin-top:14px; padding:12px; background: #F3EEE0; border-left:3px solid var(--gold);
+    border-radius: 0 6px 6px 0; font-size:12.5px; line-height:1.6;
+  }
+  .gap-highlight b{ color: var(--moss-deep); }
+
+  /* ---------- Marketing screen ---------- */
+  .tone-tabs{ display:flex; gap:8px; margin-bottom:16px; }
+  .tone-tabs span{
+    padding:6px 12px; border-radius:999px; border:1px solid var(--line);
+    font-size:12px; font-weight:600; color:var(--ink-soft); background:var(--white); cursor:pointer;
+  }
+  .tone-tabs span.sel{ background:var(--ink); color:var(--paper); border-color:var(--ink); }
+
+  .copy-card{
+    background: var(--white); border:1px solid var(--line); border-radius:8px;
+    padding:16px; margin-bottom:14px;
+  }
+  .copy-card .cc-label{ font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--ink-soft); margin-bottom:8px; letter-spacing:1px; }
+  .copy-card p{ font-size:14px; line-height:1.65; margin-bottom:12px; }
+  .copy-card .cc-foot{ display:flex; justify-content:space-between; align-items:center; }
+  .copy-card .cc-src{ font-size:10.5px; color:var(--ink-soft); }
+  .copy-btn{
+    border:1px solid var(--ink); background:none; color:var(--ink);
+    padding:6px 12px; border-radius:999px; font-size:11.5px; font-weight:600; cursor:pointer;
+  }
+
+  .source-note{
+    font-size:11.5px; color:var(--ink-soft); background:var(--paper-deep);
+    padding:10px 12px; border-radius:6px; margin-top:4px; line-height:1.6;
+  }
+
+  /* ---------- Bottom nav (mobile feel) ---------- */
+  .home-title{ font-family:'Noto Serif KR',serif; font-weight:700; font-size:19px; margin-bottom:4px;}
+  .home-sub{ font-size:12.5px; color:var(--ink-soft); margin-bottom:20px; }
+
+  /* ---------- Market area screen ---------- */
+  .area-header{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:16px; flex-wrap:wrap; gap:4px; }
+  .area-loc{ font-family:'Noto Serif KR',serif; font-weight:700; font-size:15px; }
+  .area-quarter{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--ink-soft); }
+
+  .opinion-card{
+    background: var(--ink); color: var(--paper);
+    border-radius:8px; padding:16px; margin-bottom:22px;
+  }
+  .oc-label{ font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:1px; color:#C9BFA6; margin-bottom:8px; }
+  .opinion-card p{ font-size:13px; line-height:1.6; }
+  .opinion-card b{ color: var(--gold); }
+
+  .stat-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:22px; }
+  .stat-mini{
+    background: var(--white); border:1px solid var(--line); border-radius:8px;
+    padding:13px 12px; display:flex; flex-direction:column; gap:3px;
+  }
+  .sm-label{ font-size:11px; color:var(--ink-soft); }
+  .sm-val{ font-family:'IBM Plex Mono',monospace; font-size:19px; font-weight:700; color:var(--ink); }
+  .sm-val small{ font-size:11px; font-weight:500; color:var(--ink-soft); margin-left:1px; }
+  .sm-delta{ font-size:10px; font-weight:600; margin-top:2px; }
+  .sm-delta.up{ color:var(--moss-deep); }
+  .sm-delta.down{ color:var(--rust); }
+  .sm-delta.neutral{ color:var(--ink-soft); }
+  .sm-delta.warn{ color:#8A5A16; }
+
+  .rank-of{ text-transform:none; letter-spacing:0; font-weight:500; color:var(--ink-soft); }
+  .rank-row{ display:flex; gap:10px; margin-bottom:22px; }
+  .rank-chip{
+    flex:1; background:var(--white); border:1px solid var(--line); border-radius:8px;
+    padding:12px 8px; text-align:center;
+  }
+  .rank-chip.gold{ background:#FBF0D6; border-color:#E3C077; }
+  .rc-num{ display:block; font-family:'IBM Plex Mono',monospace; font-size:17px; font-weight:700; color:var(--ink); }
+  .rc-label{ display:block; font-size:10.5px; color:var(--ink-soft); margin-top:2px; }
+
+  .peak-card{ background:var(--white); border:1px solid var(--line); border-radius:8px; padding:14px 16px; margin-bottom:16px; }
+  .peak-row{ display:flex; gap:12px; align-items:flex-start; padding:9px 0; border-bottom:1px dashed var(--line); }
+  .peak-row:last-child{ border-bottom:none; }
+  .peak-ic{ font-size:16px; margin-top:1px; }
+  .peak-title{ font-size:13px; font-weight:600; margin-bottom:2px; }
+  .peak-sub{ font-size:11.5px; color:var(--ink-soft); line-height:1.4; }
+
+  /* ---------- Trend bar charts ---------- */
+  .trend-card{ background:var(--white); border:1px solid var(--line); border-radius:8px; padding:14px 14px 4px; margin-bottom:16px; }
+  .trend-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+  .trend-head span:first-child{ font-size:12.5px; font-weight:700; }
+  .trend-tag{ font-size:10px; font-weight:600; padding:3px 8px; border-radius:999px; }
+  .trend-tag.down{ background:#F3E1DA; color:var(--rust); }
+  .trend-tag.up{ background:#E7EDDD; color:var(--moss-deep); }
+
+  .mini-bars{ display:flex; align-items:flex-end; gap:8px; height:96px; padding-bottom:4px; }
+  .mb-col{ flex:1; display:flex; flex-direction:column; align-items:center; height:100%; justify-content:flex-end; }
+  .mb-val{ font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:var(--ink-soft); margin-bottom:4px; white-space:nowrap; }
+  .mb-bar{ width:100%; background: var(--paper-deep); border-radius:3px 3px 0 0; }
+  .mb-bar.current{ background: var(--rust); opacity:0.85; }
+  .mb-bar.current.up{ background: var(--moss-deep); opacity:1; }
+  .mb-bar.peak{ background: var(--gold); }
+  .mb-x{ font-size:9px; color:var(--ink-soft); margin-top:6px; font-family:'IBM Plex Mono',monospace; }
+
+  /* ---------- Donut rows (성별 매출) ---------- */
+  .donut-row-card{
+    background:var(--white); border:1px solid var(--line); border-radius:8px;
+    padding:16px; margin-bottom:14px; display:flex; align-items:center; gap:18px;
+  }
+  .donut-wrap.sm{ width:84px; height:84px; }
+  .donut-hole.sm{ inset:9px; }
+  .donut-num.sm{ font-size:15px; }
+  .donut-legend{ flex:1; display:flex; flex-direction:column; gap:6px; }
+  .dl-row{ font-size:12px; color:var(--ink-soft); display:flex; align-items:center; gap:7px; }
+  .dl-row b{ color:var(--ink); margin-left:auto; font-family:'IBM Plex Mono',monospace; }
+  .dl-dot{ width:8px;height:8px;border-radius:50%; flex-shrink:0; }
+  .dl-note{ font-size:10.5px; color:var(--ink-soft); line-height:1.5; margin-top:2px; }
+
+  .mini-donut-row{ display:flex; gap:10px; margin-bottom:22px; }
+  .mini-donut-item{
+    flex:1; background:var(--white); border:1px solid var(--line); border-radius:8px;
+    padding:12px 8px; display:flex; flex-direction:column; align-items:center; gap:8px;
+  }
+  .donut-wrap.xs{ width:52px; height:52px; }
+  .donut-hole.xs{ inset:6px; }
+  .donut-num.xs{ font-size:11px; }
+  .mdi-label{ font-size:9.5px; color:var(--ink-soft); text-align:center; line-height:1.3; }
+
+  /* ---------- Grouped bars (성별/연령별) ---------- */
+  .gb-legend{ display:flex; gap:16px; font-size:11px; color:var(--ink-soft); margin-bottom:10px; }
+  .gb-legend span{ display:flex; align-items:center; gap:6px; }
+  .grouped-bars{ display:flex; align-items:flex-end; gap:6px; height:96px; padding-bottom:4px; }
+  .gb-col{ flex:1; display:flex; flex-direction:column; align-items:center; height:100%; justify-content:flex-end; }
+  .gb-pair{ display:flex; gap:3px; align-items:flex-end; height:82px; width:100%; justify-content:center; }
+  .gb-bar-wrap{ display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; width:16px; }
+  .gb-val{ font-family:'IBM Plex Mono',monospace; font-size:8px; color:var(--ink-soft); margin-bottom:3px; }
+  .gb-bar{ width:100%; border-radius:2px 2px 0 0; }
+  .gb-bar.male{ background: var(--paper-deep); }
+  .gb-bar.female{ background: var(--moss-deep); }
+
+  /* ---------- Metric toggle chips (5분기 추이 통합) ---------- */
+  .metric-chips{ display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap; }
+  .metric-chips .chip{ padding:6px 11px; font-size:11px; }
+
+  /* ---------- Line trend chart (5분기 추이) ---------- */
+  .line-svg{ width:100%; height:auto; display:block; }
+  .trend-line{ fill:none; stroke-width:2; stroke-linejoin:round; stroke-linecap:round; }
+  .trend-line.down{ stroke: var(--rust); }
+  .trend-line.up{ stroke: var(--moss-deep); }
+  .trend-dot{ stroke: var(--white); stroke-width:1.5; }
+  .trend-dot.down{ fill: var(--rust); }
+  .trend-dot.up{ fill: var(--moss-deep); }
+  .trend-dot.last{ stroke-width:2; }
+  .line-val{ font-family:'IBM Plex Mono',monospace; font-size:8.5px; fill: var(--ink-soft); text-anchor:middle; }
+  .line-val.strong{ fill: var(--ink); font-weight:700; font-size:9.5px; }
+
+  /* ---------- Ranked horizontal list (요일별 매출) ---------- */
+  .rank-list-card{ background:var(--white); border:1px solid var(--line); border-radius:8px; padding:14px 16px; margin-bottom:16px; }
+  .rank-list-row{ display:flex; align-items:center; gap:10px; padding:7px 0; }
+  .rl-medal{
+    width:18px; height:18px; border-radius:50%; background:var(--paper-deep); color:var(--ink-soft);
+    font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:700;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .rl-medal.gold{ background:var(--gold); color:var(--white); }
+  .rl-day{ width:38px; font-size:12px; color:var(--ink-soft); flex-shrink:0; }
+  .rl-track{ flex:1; height:7px; background:var(--paper-deep); border-radius:4px; overflow:hidden; }
+  .rl-fill{ height:100%; background:var(--ink-soft); border-radius:4px; }
+  .rl-fill.gold{ background:var(--gold); }
+  .rl-pct{ width:44px; text-align:right; font-family:'IBM Plex Mono',monospace; font-size:11.5px; font-weight:600; flex-shrink:0; }
+
+  /* ---------- Lollipop chart (연령대별 매출) ---------- */
+  .lollipop-card{ background:var(--white); border:1px solid var(--line); border-radius:8px; padding:16px; margin-bottom:16px; }
+  .lp-row{ display:flex; align-items:center; gap:10px; padding:9px 0; }
+  .lp-age{ width:36px; font-size:11.5px; color:var(--ink-soft); flex-shrink:0; }
+  .lp-track{ flex:1; position:relative; height:2px; background:var(--line); }
+  .lp-stem{ position:absolute; left:0; top:0; height:2px; background:var(--ink-soft); }
+  .lp-stem.peak{ background:var(--gold); height:3px; top:-0.5px; }
+  .lp-dot{
+    position:absolute; top:50%; width:11px; height:11px; border-radius:50%;
+    background:var(--white); border:2.5px solid var(--ink-soft); transform:translate(-50%,-50%);
+  }
+  .lp-dot.peak{ border-color:var(--gold); width:14px; height:14px; }
+  .lp-val{ width:42px; text-align:right; font-family:'IBM Plex Mono',monospace; font-size:11.5px; font-weight:600; color:var(--ink-soft); flex-shrink:0; }
+  .lp-val.peak{ color:var(--gold); font-weight:700; }
+
+  /* ---------- Area chart ---------- */
+  .area-chart-card{ background:var(--white); border:1px solid var(--line); border-radius:8px; padding:14px 14px 12px; margin-bottom:16px; }
+  .area-svg{ width:100%; height:auto; display:block; }
+  .grid-line{ stroke: var(--line); stroke-width:0.6; }
+  .area-fill{ fill: rgba(85,100,59,0.14); stroke:none; }
+  .area-line{ fill:none; stroke: var(--moss-deep); stroke-width:1.8; stroke-linejoin:round; stroke-linecap:round; }
+  .area-peak{ fill: var(--gold); stroke: var(--white); stroke-width:1.5; }
+  .area-labels{ display:flex; justify-content:space-between; padding:0 4px; margin-top:2px; }
+  .area-labels span{ font-size:9px; color:var(--ink-soft); font-family:'IBM Plex Mono',monospace; }
+  .area-labels .peak-x{ color: var(--moss-deep); font-weight:700; }
+  .area-note{ margin-top:10px; padding-top:10px; border-top:1px dashed var(--line); font-size:12px; color:var(--ink-soft); }
+  .area-note b{ color:var(--moss-deep); }
+
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ============ 로그인 (최초 진입) ============ -->
+  <div class="login-screen" id="loginScreen">
+    <div class="login-brand">
+      <div class="login-mark">단</div>
+      <div class="login-title">단골장부</div>
+      <div class="login-tagline">소상공인 사장님을 위한<br>매출 · 마케팅 비서</div>
+    </div>
+
+    <div class="login-form" id="loginStep">
+      <div class="field">
+        <label>아이디 (이메일)</label>
+        <input type="text" placeholder="owner@example.com" value="longvacation@cafe.com">
+      </div>
+      <div class="field">
+        <label>비밀번호</label>
+        <input type="password" placeholder="비밀번호 입력" value="••••••••">
+      </div>
+      <button class="submit-btn" onclick="completeLogin()">로그인</button>
+      <div class="login-alt" onclick="showSignup()">아직 계정이 없으신가요? <b>회원가입</b></div>
+    </div>
+
+    <div class="login-form" id="signupStep" style="display:none">
+      <div class="field">
+        <label>아이디 (이메일)</label>
+        <input type="text" placeholder="owner@example.com">
+      </div>
+      <div class="field">
+        <label>비밀번호</label>
+        <input type="password" placeholder="8자 이상 입력">
+      </div>
+      <div class="field">
+        <label>비밀번호 확인</label>
+        <input type="password" placeholder="비밀번호 다시 입력">
+      </div>
+      <button class="submit-btn" onclick="completeLogin()">회원가입</button>
+      <div class="login-alt" onclick="showLogin()">이미 계정이 있으신가요? <b>로그인</b></div>
+    </div>
+  </div>
+
+  <header class="top">
+    <div class="brand">단골장부 <small>Danggol Ledger</small></div>
+    <div class="store-pill" onclick="openBizAuth()" style="cursor:pointer">
+      <span class="dot"></span> 우리 매장 &nbsp;<b id="storePillName">등록 필요</b>
+      <span class="store-pill-arrow">›</span>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- ============ 01 홈 ============ -->
+    <section class="screen active" id="home">
+      <div class="home-title">안녕하세요, 사장님</div>
+      <div class="home-sub">8월 19일 화요일 · 오늘도 좋은 하루예요</div>
+
+      <div class="briefing">
+        <div class="ic">AI</div>
+        <p><span class="tag">오늘의 브리핑</span>롱베케이션은 연남동 특유의 아늑한 일본식 인테리어와 교토 말차 디저트로 꾸준히 좋은 평을 받고 있어요. 이번 주는 디저트 매출 비중이 특히 높았습니다.</p>
+      </div>
+
+      <div class="section-label">오늘 등록된 매출</div>
+      <div class="today-card">
+        <div class="today-main">
+          <span class="today-amt">418,000<small>원</small></span>
+        </div>
+        <div class="today-badges">
+          <span class="today-badge up">▲ 어제보다 12%</span>
+          <span class="today-badge up">▲ 지난주 토요일보다 5%</span>
+        </div>
+        <div class="today-sub">
+          <span>결제 <b>34건</b></span>
+          <span class="divider">·</span>
+          <span class="today-time">8월 19일(토) 리포트 반영</span>
+        </div>
+      </div>
+
+      <div class="section-label">이번 달 요약</div>
+      <div class="receipt">
+        <div class="stamp">이번달<br>결산</div>
+        <div class="receipt-head">
+          <h2>8월 손익 명세</h2>
+          <span>2026.08.01–08.19</span>
+        </div>
+        <div class="receipt-row"><span class="label">매출</span><span class="amt up">+ 6,240,000</span></div>
+        <div class="receipt-row"><span class="label">재료비</span><span class="amt down">− 1,850,000</span></div>
+        <div class="receipt-row"><span class="label">임대료</span><span class="amt down">− 1,200,000</span></div>
+        <div class="receipt-row"><span class="label">기타 지출</span><span class="amt down">− 430,000</span></div>
+        <div class="receipt-total">
+          <span class="t-label">순이익</span>
+          <span class="t-amt">2,760,000 <small>원</small></span>
+        </div>
+      </div>
+
+      <div class="section-label">이번 달 페이스</div>
+      <div class="pace-card">
+        <div class="pace-top">
+          <div>
+            <div class="pace-label">이대로면 이번 달 예상</div>
+            <div class="pace-amt">약 10,340,000<small>원</small></div>
+          </div>
+          <span class="today-badge up">▲ 저번달보다 8% 빠른 페이스</span>
+        </div>
+        <div class="pace-bars">
+          <div class="pace-bar-row">
+            <span class="pb-label">이번 달 (8/19 기준)</span>
+            <div class="bar-track"><div class="bar-fill us" style="width:66%"></div></div>
+            <span class="pb-amt">6,240,000</span>
+          </div>
+          <div class="pace-bar-row">
+            <span class="pb-label">저번달 같은 날짜</span>
+            <div class="bar-track"><div class="bar-fill comp" style="width:58%"></div></div>
+            <span class="pb-amt">5,780,000</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-label">작년 같은 달과 비교</div>
+      <div class="yoy-card">
+        <div class="pace-bars">
+          <div class="pace-bar-row">
+            <span class="pb-label">2026년 8월</span>
+            <div class="bar-track"><div class="bar-fill us" style="width:70%"></div></div>
+            <span class="pb-amt">6,240,000</span>
+          </div>
+          <div class="pace-bar-row">
+            <span class="pb-label">2025년 8월</span>
+            <div class="bar-track"><div class="bar-fill comp" style="width:52%"></div></div>
+            <span class="pb-amt">4,650,000</span>
+          </div>
+        </div>
+        <div class="yoy-note">작년 대비 <b>+34%</b> 성장했어요. 데이터가 더 쌓일수록 계절 패턴 비교가 정교해져요.</div>
+      </div>
+
+      <div class="history-link" onclick="openHistory()">
+        전체 매출 내역 보기 <span class="hl-arrow">→</span>
+      </div>
+
+    </section>
+
+    <!-- ============ 매출 히스토리 (서브 화면) ============ -->
+    <section class="screen" id="history">
+      <div class="history-head">
+        <button class="back-btn" onclick="closeHistory()">←</button>
+        <span class="history-title">전체 매출 내역</span>
+      </div>
+
+      <div class="tone-tabs" id="histTabs">
+        <span class="sel" onclick="switchHist('daily', this)">일별</span>
+        <span onclick="switchHist('monthly', this)">월별</span>
+      </div>
+
+      <div class="hist-view" id="histDaily">
+        <table class="hist-table">
+          <thead>
+            <tr><th>날짜</th><th>매출액</th><th>전일比</th><th>전주 동요일比</th></tr>
+          </thead>
+          <tbody>
+            <tr class="best"><td>8/19 (토)</td><td>418,000</td><td class="up">▲12%</td><td class="up">▲5%</td></tr>
+            <tr><td>8/18 (금)</td><td>373,000</td><td class="up">▲8%</td><td class="down">▼3%</td></tr>
+            <tr><td>8/17 (목)</td><td>345,000</td><td class="down">▼4%</td><td class="up">▲2%</td></tr>
+            <tr><td>8/16 (수)</td><td>359,000</td><td class="up">▲6%</td><td class="up">▲9%</td></tr>
+            <tr><td>8/15 (화)</td><td>338,000</td><td class="down">▼11%</td><td class="down">▼2%</td></tr>
+            <tr><td>8/14 (월)</td><td>380,000</td><td class="up">▲3%</td><td class="up">▲7%</td></tr>
+            <tr><td>8/13 (일)</td><td>369,000</td><td class="down">▼15%</td><td class="down">▼6%</td></tr>
+          </tbody>
+        </table>
+        <div class="hist-note">토요일 · 금요일에 꾸준히 강세예요. 화·일요일은 상대적으로 약한 편이에요.</div>
+      </div>
+
+      <div class="hist-view" id="histMonthly" style="display:none">
+        <table class="hist-table">
+          <thead>
+            <tr><th>월</th><th>총매출</th><th>전월比</th><th>전년동월比</th></tr>
+          </thead>
+          <tbody>
+            <tr class="best"><td>2026.08</td><td>6,240,000</td><td class="up">▲8%</td><td class="up">▲34%</td></tr>
+            <tr><td>2026.07</td><td>5,780,000</td><td class="down">▼2%</td><td class="up">▲21%</td></tr>
+            <tr><td>2026.06</td><td>5,910,000</td><td class="up">▲5%</td><td class="up">▲18%</td></tr>
+            <tr><td>2026.05</td><td>5,620,000</td><td class="up">▲12%</td><td class="up">▲15%</td></tr>
+            <tr><td>2026.04</td><td>5,020,000</td><td class="down">▼3%</td><td class="up">▲9%</td></tr>
+          </tbody>
+        </table>
+        <div class="hist-note">최근 5개월 연속으로 작년 같은 달보다 매출이 늘고 있어요.</div>
+      </div>
+    </section>
+
+    <!-- ============ 사업자 인증 (서브 화면) ============ -->
+    <!-- ============ 매출 리포트 컬럼 매핑 (서브 화면) ============ -->
+    <!-- ============ 전체 리뷰 (서브 화면) ============ -->
+    <section class="screen" id="allReviews">
+      <div class="history-head">
+        <button class="back-btn" onclick="closeAllReviews()">←</button>
+        <span class="history-title">전체 리뷰</span>
+        <button class="refresh-btn" id="refreshBtn" onclick="refreshReviews()">
+          <span id="refreshIcon">⟳</span> 갱신
+        </button>
+      </div>
+
+      <div class="refresh-status" id="refreshStatus">마지막 갱신 · 8월 18일 03:00 (자동 배치) · 총 <b>246건</b></div>
+
+      <div class="review-list" id="allReviewsList">
+        <div class="review-card">
+          <div class="rc-top"><span class="rc-rating">★ 5.0</span><span class="rc-meta">저녁 · 바로 입장 · 1번째 방문</span></div>
+          <p class="rc-text">고급 말차를 사용한 간식이 특별하게 느껴졌습니다. 조용한 분위기 덕분에 편안한 차 시간을 즐기기 딱 좋아요 ~</p>
+          <div class="rc-tags"><span class="pay-tag">예약 없이 이용</span><span class="pay-tag">데이트</span></div>
+          <div class="rc-date">8.16 · 일요일</div>
+        </div>
+        <div class="review-card">
+          <div class="rc-top"><span class="rc-rating">★ 5.0</span><span class="rc-meta">점심 · 바로 입장 · 1번째 방문</span></div>
+          <p class="rc-text">연남동 롱베케이션 냉호지 젤리는 여름철에 딱 어울리는 시원하고 깔끔한 디저트! 진한 호지차 젤리에 부드러운 우유크림이랑 팥, 과일이 조화롭게 어우러져서 맛있게 먹었어요.</p>
+          <div class="rc-tags"><span class="pay-tag">데이트</span></div>
+          <div class="rc-date">8.9 · 일요일</div>
+        </div>
+        <div class="review-card">
+          <div class="rc-top"><span class="rc-rating">★ 4.0</span><span class="rc-meta">점심 · 바로 입장 · 1번째 방문</span></div>
+          <p class="rc-text">처음 와봤는데 공간이 너무 아늑하고 깨끗해서 기분이 좋았어요. 서비스도 친절했어요. 인상 깊었어용 츄천</p>
+          <div class="rc-tags"><span class="pay-tag">나들이</span></div>
+          <div class="rc-date">6.25 · 목요일</div>
+        </div>
+        <div class="review-card flagged">
+          <div class="rc-top"><span class="rc-rating">★ 3.0</span><span class="rc-meta">저녁 · 바로 입장 · 1번째 방문</span></div>
+          <p class="rc-text">말차라떼는 밍밍했어요. 그런데 에어컨 바로 아래 자리에 먼지가 가득 쌓인 게 보였습니다.</p>
+          <div class="rc-tags"><span class="pay-tag">친목</span></div>
+          <div class="rc-date">6.26 · 금요일 <span class="rc-flag">개선 힌트</span></div>
+        </div>
+        <div class="review-card">
+          <div class="rc-top"><span class="rc-rating">★ 4.0</span><span class="rc-meta">점심 · 바로 입장 · 1번째 방문</span></div>
+          <p class="rc-text">마포구 연남동 롱베케이션 말차 테린느, 밀가루가 안 들어간 글루텐프리라 흡족합니다. 쫀득한 식감에 말차가 듬뿍 들어가서 건강하고 맛있어요.</p>
+          <div class="rc-tags"><span class="pay-tag">나들이</span></div>
+          <div class="rc-date">6.17 · 수요일</div>
+        </div>
+      </div>
+
+      <div class="review-list" id="moreReviewsDynamic" style="display:none; margin-top:10px;"></div>
+
+      <button class="load-more-btn" id="loadMoreBtn" onclick="loadMoreReviews()">리뷰 10개 더 보기</button>
+    </section>
+
+    <!-- ============ 매출 리포트 컬럼 매핑 (서브 화면) ============ -->
+    <section class="screen" id="csvMapping">
+      <div class="history-head">
+        <button class="back-btn" onclick="closeCsvMapping()">←</button>
+        <span class="history-title">리포트 업로드 · 컬럼 확인</span>
+      </div>
+
+      <div class="upload-zone" id="uploadZone" onclick="document.getElementById('csvFileInput').click()">
+        <div class="uz-ic">⬆</div>
+        <div class="uz-title">파일을 선택하거나 여기로 끌어다 놓으세요</div>
+        <div class="uz-sub">지원 형식 · .xlsx, .csv (POS에서 내보낸 매출 리포트)</div>
+        <button class="uz-btn" type="button">파일 선택</button>
+        <input type="file" id="csvFileInput" accept=".xlsx,.xls,.csv" style="display:none" onchange="onFileSelected(this)">
+      </div>
+
+      <div id="mappingResult" style="display:none">
+        <div class="file-info-card">
+          <span class="fi-ic">📄</span>
+          <div>
+            <div class="fi-name" id="fiName">매출리포트_0819.xlsx</div>
+            <div class="fi-sub">128행 감지됨 · 컬럼 4개</div>
+          </div>
+        </div>
+
+        <div class="section-label">업로드된 데이터 미리보기</div>
+        <div class="preview-scroll">
+          <table class="hist-table preview-table">
+            <thead>
+              <tr><th>거래일시</th><th>매출액</th><th>결제구분</th><th>비고</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>2026-08-19 14:32</td><td>12,000</td><td>카드</td><td>-</td></tr>
+              <tr><td>2026-08-19 14:18</td><td>8,500</td><td>현금</td><td>-</td></tr>
+              <tr><td>2026-08-19 13:55</td><td>21,000</td><td>카드</td><td>단체</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="mapping-note">이 POS 형식은 처음 보는 구조예요. 아래에서 어떤 컬럼이 무엇을 뜻하는지 한 번만 확인해주시면, 다음부터는 자동으로 적용돼요.</div>
+
+        <div class="section-label">컬럼 매칭</div>
+        <div class="form-card">
+          <div class="field">
+            <label>날짜 컬럼</label>
+            <select>
+              <option selected>거래일시 (자동 추정)</option>
+              <option>매출액</option>
+              <option>결제구분</option>
+              <option>비고</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>매출 금액 컬럼</label>
+            <select>
+              <option>거래일시</option>
+              <option selected>매출액 (자동 추정)</option>
+              <option>결제구분</option>
+              <option>비고</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>결제수단 컬럼 (선택)</label>
+            <select>
+              <option>거래일시</option>
+              <option>매출액</option>
+              <option selected>결제구분 (자동 추정)</option>
+              <option>비고</option>
+              <option>사용 안 함</option>
+            </select>
+          </div>
+          <button class="submit-btn" onclick="confirmCsvMapping()">매핑 완료하고 반영하기</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 사업자 인증 (서브 화면) ============ -->
+    <section class="screen" id="bizAuth">
+      <div class="history-head">
+        <button class="back-btn" onclick="closeBizAuth()">←</button>
+        <span class="history-title">매장 등록 · 사업자 인증</span>
+      </div>
+
+      <p class="biz-desc">사업자등록번호로 실제 사업자인지 확인한 뒤, 매장명과 연락처만 입력하면 등록이 끝나요. 국세청 공식 데이터로 확인되니 안심하세요.</p>
+
+      <div class="form-card" id="bizForm">
+        <div class="field">
+          <label>사업자등록번호</label>
+          <input type="text" placeholder="000-00-00000" value="132-05-57431">
+        </div>
+        <div class="field">
+          <label>개업일자</label>
+          <input type="text" placeholder="YYYYMMDD" value="20240312">
+        </div>
+        <div class="field">
+          <label>대표자명</label>
+          <input type="text" placeholder="홍길동" value="김민서">
+        </div>
+        <button class="submit-btn" onclick="verifyBiz()">국세청으로 인증하기</button>
+      </div>
+
+      <div class="form-card" id="storeInfoForm" style="display:none">
+        <div class="field">
+          <label>매장명</label>
+          <input type="text" id="storeNameInput" placeholder="예: 롱베케이션" value="롱베케이션">
+        </div>
+        <div class="field">
+          <label>연락처</label>
+          <input type="text" placeholder="02-000-0000" value="02-338-8865">
+        </div>
+        <button class="submit-btn" onclick="completeRegistration()">매장 등록 완료</button>
+      </div>
+
+      <div class="verify-result" id="verifyResult" style="display:none">
+        <div class="vr-check">✓</div>
+        <div class="vr-title">인증된 사업자예요</div>
+        <div class="vr-sub">국세청 데이터와 일치하는 정보를 확인했어요</div>
+
+        <div class="vr-detail">
+          <div class="vr-row"><span class="vr-label">사업자 상태</span><span class="vr-val ok">계속사업자</span></div>
+          <div class="vr-row"><span class="vr-label">과세 유형</span><span class="vr-val">부가가치세 일반과세자</span></div>
+          <div class="vr-row"><span class="vr-label">사업자등록번호</span><span class="vr-val mono">132-05-57431</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" id="ledger">
+      <div class="pl-strip">
+        <div class="pl-col">
+          <span class="pl-label">매출</span>
+          <span class="pl-amt">6,240,000</span>
+        </div>
+        <div class="pl-div"></div>
+        <div class="pl-col">
+          <span class="pl-label">지출</span>
+          <span class="pl-amt down">3,480,000</span>
+        </div>
+        <div class="pl-div"></div>
+        <div class="pl-col">
+          <span class="pl-label">순이익 <span class="pl-badge">흑자</span></span>
+          <span class="pl-amt up strong">2,760,000</span>
+        </div>
+      </div>
+
+      <div class="tone-tabs" id="ledgerTabs">
+        <span class="sel" onclick="switchLedger('status', this)">현황</span>
+        <span onclick="switchLedger('register', this)">지출 등록</span>
+        <span onclick="switchLedger('history', this)">내역</span>
+      </div>
+
+      <!-- 현황 -->
+      <div class="ledger-view" id="ledgerStatus">
+        <div class="sync-card">
+          <div class="sync-top">
+            <div class="sync-status">
+              <span class="sync-dot"></span>
+              <div>
+                <div class="sync-title">최근 리포트 반영됨</div>
+                <div class="sync-sub">매출리포트_0818.xlsx · 8월 18일 업로드</div>
+              </div>
+            </div>
+            <button class="sync-btn" onclick="openCsvMapping()">새 리포트 업로드</button>
+          </div>
+          <div class="sync-figure">
+            <span class="sf-label">업로드 기준 이번 달 누적 매출</span>
+            <span class="sf-amt">6,240,000<small>원</small></span>
+          </div>
+          <div class="sync-note">쓰고 계신 POS 앱에서 내보낸 매출 리포트(엑셀·CSV)를 올리면 자동으로 읽어와요. 리포트가 없는 날은 지출 등록 탭에서 오늘 매출만 간단히 입력할 수 있어요.</div>
+        </div>
+
+        <div class="section-label">이번 달 지출 비중</div>
+        <div class="form-card">
+          <div class="cat-bar-row">
+            <span class="cbr-label">재료비</span>
+            <div class="bar-track"><div class="bar-fill us" style="width:52%"></div></div>
+            <span class="cbr-pct">52%</span>
+          </div>
+          <div class="cat-bar-row">
+            <span class="cbr-label">임대료</span>
+            <div class="bar-track"><div class="bar-fill comp" style="width:34%"></div></div>
+            <span class="cbr-pct">34%</span>
+          </div>
+          <div class="cat-bar-row">
+            <span class="cbr-label">공과금·기타</span>
+            <div class="bar-track"><div class="bar-fill comp" style="width:14%"></div></div>
+            <span class="cbr-pct">14%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 지출 등록 -->
+      <div class="ledger-view" id="ledgerRegister" style="display:none">
+        <div class="form-card">
+          <div class="field">
+            <label>카테고리</label>
+            <select><option>재료 구입</option><option>임대료</option><option>인건비</option><option>공과금</option><option>카드수수료</option><option>세금</option><option>기타</option></select>
+          </div>
+          <div class="field">
+            <label>거래처 (선택)</label>
+            <input type="text" placeholder="예: 연남원두상회">
+          </div>
+          <div class="field">
+            <label>금액 (원)</label>
+            <input type="text" placeholder="예: 340000">
+          </div>
+          <div class="field">
+            <label>결제수단</label>
+            <div class="chip-row">
+              <span class="chip sel">카드</span>
+              <span class="chip">현금</span>
+              <span class="chip">계좌이체</span>
+            </div>
+          </div>
+          <div class="field">
+            <label>메모 (선택)</label>
+            <input type="text" placeholder="예: 원두 20kg 발주">
+          </div>
+          <div class="field-row">
+            <label class="check-row"><input type="checkbox"> 매달 반복되는 고정비예요</label>
+            <button class="receipt-btn">📎 영수증 첨부</button>
+          </div>
+          <button class="submit-btn">지출 기록하기</button>
+        </div>
+
+        <div class="section-label">등록된 고정비</div>
+        <div class="form-card" style="padding:6px 16px;">
+          <div class="ledger-item" onclick="openExpenseEdit('rent')" style="cursor:pointer">
+            <div class="li-left"><span class="li-cat">임대료</span><span class="li-date">매달 15일 자동 등록</span></div>
+            <span class="li-amt amt down">− 1,200,000</span>
+          </div>
+          <div class="ledger-item" onclick="openExpenseEdit('internet')" style="cursor:pointer">
+            <div class="li-left"><span class="li-cat">통신·인터넷</span><span class="li-date">매달 5일 자동 등록</span></div>
+            <span class="li-amt amt down">− 89,000</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 내역 -->
+      <div class="ledger-view" id="ledgerHistory" style="display:none">
+        <div class="section-label">최근 지출 내역</div>
+        <div class="form-card" style="padding:6px 16px;">
+          <div class="ledger-item" onclick="openExpenseEdit('beans')" style="cursor:pointer">
+            <div class="li-left"><span class="li-cat">재료 구입 <span class="li-vendor">· 연남원두상회</span></span><span class="li-date">08.18 · 월 <span class="pay-tag">카드</span></span></div>
+            <span class="li-amt amt down">− 340,000</span>
+          </div>
+          <div class="ledger-item" onclick="openExpenseEdit('rent2')" style="cursor:pointer">
+            <div class="li-left"><span class="li-cat">임대료</span><span class="li-date">08.15 · 토 <span class="pay-tag">계좌이체</span></span></div>
+            <span class="li-amt amt down">− 1,200,000</span>
+          </div>
+          <div class="ledger-item" onclick="openExpenseEdit('utility')" style="cursor:pointer">
+            <div class="li-left"><span class="li-cat">공과금</span><span class="li-date">08.12 · 수 <span class="pay-tag">계좌이체</span></span></div>
+            <span class="li-amt amt down">− 210,000</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 03 비교 ============ -->
+    <section class="screen" id="compare">
+      <div class="section-label">종합 평가</div>
+      <div class="score-card">
+        <div class="donut-wrap">
+          <div class="donut"></div>
+          <div class="donut-hole">
+            <span class="donut-num">246<small>건</small></span>
+            <span class="donut-sub">누적 리뷰</span>
+          </div>
+        </div>
+        <div class="score-side">
+          <div class="score-row">
+            <span class="sr-dot pos"></span>
+            <span class="sr-label">긍정 언급</span>
+            <span class="sr-val">추출 대기 중</span>
+          </div>
+          <div class="score-row">
+            <span class="sr-dot neg"></span>
+            <span class="sr-label">부정 언급</span>
+            <span class="sr-val">추출 대기 중</span>
+          </div>
+          <div class="score-note">리뷰 원문 분석 배치를 실행하면<br>긍정·부정 비율이 채워져요</div>
+        </div>
+      </div>
+
+      <div class="section-label">우리 매장 강점 프로필</div>
+      <div class="strength-hero">
+        <div class="sh-top">
+          <span class="sh-rating">★ 4.66</span>
+          <span class="sh-count">리뷰 246개 기준</span>
+        </div>
+
+        <div class="briefing" style="margin-bottom:18px;">
+          <div class="ic">AI</div>
+          <p><span class="tag">AI 브리핑</span>교토말차라떼와 말차푸딩이 인기 메뉴로, 진한 말차의 고급스러운 향과 자연스러운 단맛이 돋보여요. 일본 감성의 아늑한 인테리어도 강점이에요.</p>
+        </div>
+
+        <div class="sh-keywords">
+          <div class="sh-kw-item">
+            <span class="sh-kw-ic">🍰</span>
+            <div class="sh-kw-text"><span class="sh-kw-name">디저트가 맛있어요</span><span class="sh-kw-count">921건</span></div>
+          </div>
+          <div class="sh-kw-item">
+            <span class="sh-kw-ic">🛋️</span>
+            <div class="sh-kw-text"><span class="sh-kw-name">인테리어가 멋져요</span><span class="sh-kw-count">697건</span></div>
+          </div>
+          <div class="sh-kw-item">
+            <span class="sh-kw-ic">☕</span>
+            <div class="sh-kw-text"><span class="sh-kw-name">커피가 맛있어요</span><span class="sh-kw-count">647건</span></div>
+          </div>
+          <div class="sh-kw-item">
+            <span class="sh-kw-ic">💛</span>
+            <div class="sh-kw-text"><span class="sh-kw-name">친절해요</span><span class="sh-kw-count">500건</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="peer-card">
+        <div class="peer-row">
+          <span class="peer-label">우리 매장 리뷰 수</span>
+          <span class="peer-val us">246개</span>
+        </div>
+        <div class="peer-row">
+          <span class="peer-label">연남·홍대 카페 70곳 평균</span>
+          <span class="peer-val">320개</span>
+        </div>
+        <div class="peer-badge">동네 카페 70곳 중 <b>상위 43%</b></div>
+        <div class="peer-note">추측치가 아니라 실제로 크롤링한 동네 카페 70곳의 데이터를 기준으로 계산했어요.</div>
+      </div>
+
+      <div class="section-label">리뷰 심층 분석 <span class="rank-of">(리뷰 246건 원문 기준)</span></div>
+
+      <div class="wordcloud-card">
+        <div class="wc-label">자주 등장하는 단어</div>
+        <div class="wc-cloud">
+          <span class="wc-w" style="top:12%; left:6%; font-size:26px; color:var(--moss-deep); transform:rotate(-3deg);">연남동</span>
+          <span class="wc-w" style="top:8%; left:56%; font-size:15px; color:var(--ink-soft); transform:rotate(-6deg);">천천히</span>
+          <span class="wc-w" style="top:18%; left:80%; font-size:14px; color:var(--ink); transform:rotate(5deg);">디저트</span>
+          <span class="wc-w" style="top:42%; left:32%; font-size:22px; color:var(--ink); transform:rotate(-2deg);">말차</span>
+          <span class="wc-w" style="top:38%; left:2%; font-size:13px; color:var(--ink-soft); transform:rotate(2deg);">시간</span>
+          <span class="wc-w" style="top:58%; left:62%; font-size:16px; color:var(--ink);">분위기</span>
+          <span class="wc-w" style="top:66%; left:12%; font-size:19px; color:var(--moss-deep); transform:rotate(3deg);">커피</span>
+          <span class="wc-w" style="top:78%; left:58%; font-size:14px; color:var(--ink-soft); transform:rotate(-4deg);">조용한</span>
+          <span class="wc-w" style="top:80%; left:32%; font-size:12px; color:var(--ink-soft); transform:rotate(-1deg);">오래</span>
+        </div>
+        <div class="wc-note">단순 태그 집계가 아니라 리뷰 원문 246건에서 실제로 자주 쓰인 단어를 직접 센 결과예요. "연남동"과 "천천히·조용한"이 반복되는 걸 보면, 이 매장은 '여유'라는 키워드로 기억되고 있어요.</div>
+      </div>
+
+      <div class="insight-card">
+        <div class="insight-head">
+          <span class="insight-ic">🔍</span>
+          <div>
+            <div class="insight-title">드물지만 놓치면 안 되는 의견</div>
+            <div class="insight-sub">평점은 낮지 않은데, 구체적인 개선 힌트가 담긴 리뷰 2건</div>
+          </div>
+        </div>
+        <div class="insight-item">
+          <div class="insight-quote">"에어컨 바로 아래 자리에 앉았는데, 위를 보니 먼지가 가득 쌓여 있었어요."</div>
+          <div class="insight-action">→ 환기구·좌석 주변 청결 점검을 한번 해보시는 게 좋겠어요</div>
+        </div>
+        <div class="insight-item">
+          <div class="insight-quote">"말차라떼는 조금 밍밍했어요."</div>
+          <div class="insight-action">→ 시그니처 메뉴인 만큼, 농도 레시피를 한번 점검해볼 만해요</div>
+        </div>
+      </div>
+
+      <div class="section-label">실제 리뷰 <span class="rank-of">(크롤링 원본 중 5건)</span></div>
+      <div class="review-list">
+        <div class="review-card">
+          <div class="rc-top">
+            <span class="rc-rating">★ 5.0</span>
+            <span class="rc-meta">저녁 · 바로 입장 · 1번째 방문</span>
+          </div>
+          <p class="rc-text">고급 말차를 사용한 간식이 특별하게 느껴졌습니다. 조용한 분위기 덕분에 편안한 차 시간을 즐기기 딱 좋아요 ~</p>
+          <div class="rc-tags"><span class="pay-tag">예약 없이 이용</span><span class="pay-tag">데이트</span><span class="pay-tag">연인・배우자</span></div>
+          <div class="rc-date">8.16 · 일요일</div>
+        </div>
+
+        <div class="review-card">
+          <div class="rc-top">
+            <span class="rc-rating">★ 4.0</span>
+            <span class="rc-meta">점심 · 바로 입장 · 1번째 방문</span>
+          </div>
+          <p class="rc-text">처음 와봤는데 공간이 너무 아늑하고 깨끗해서 기분이 좋았어요. 서비스도 친절했어요. 인상 깊었어용 츄천</p>
+          <div class="rc-tags"><span class="pay-tag">예약 없이 이용</span><span class="pay-tag">나들이</span><span class="pay-tag">지인・동료</span></div>
+          <div class="rc-date">6.25 · 목요일</div>
+        </div>
+
+        <div class="review-card">
+          <div class="rc-top">
+            <span class="rc-rating dim">평점 없음</span>
+            <span class="rc-meta">점심 · 1번째 방문</span>
+          </div>
+          <p class="rc-text">완전 취향 저격 카페 발견! 😍 말차 롤케이크가 이렇게 맛있어도 되나요? 겉은 바삭한데 속은 촉촉하고... 말차 맛이 너무 강하지 않아서 좋았어요.</p>
+          <div class="rc-tags"><span class="pay-tag">친목</span></div>
+          <div class="rc-date">3.1 · 일요일</div>
+        </div>
+
+        <div class="review-card flagged">
+          <div class="rc-top">
+            <span class="rc-rating">★ 3.0</span>
+            <span class="rc-meta">저녁 · 바로 입장 · 1번째 방문</span>
+          </div>
+          <p class="rc-text">이색적인 음료가 있어요. 에스프레소 토닉은 시도해볼만했어요. 말차라떼는 밍밍했어요. 치즈테린니는 매우 꾸덕하고 맛있었어요. 그런데 에어컨 바로 아래 자리에 먼지가 가득 쌓인 게 보였습니다.</p>
+          <div class="rc-tags"><span class="pay-tag">예약 없이 이용</span><span class="pay-tag">친목</span><span class="pay-tag">친구</span></div>
+          <div class="rc-date">6.26 · 금요일 <span class="rc-flag">개선 힌트 발견됨</span></div>
+        </div>
+
+        <div class="review-card">
+          <div class="rc-top">
+            <span class="rc-rating dim">평점 없음</span>
+            <span class="rc-meta">저녁 · 바로 입장 · 1번째 방문</span>
+          </div>
+          <p class="rc-text">이곳의 디저트는 정말 예술입니다. 말차의 깊은 맛을 제대로 느낄 수 있었어요.</p>
+          <div class="rc-tags"><span class="pay-tag">예약 없이 이용</span><span class="pay-tag">데이트</span><span class="pay-tag">연인・배우자</span></div>
+          <div class="rc-date">3.19 · 목요일</div>
+        </div>
+      </div>
+
+      <div class="history-link" onclick="openAllReviews()">
+        전체 리뷰 보기 (246건) <span class="hl-arrow">→</span>
+      </div>
+
+      <div class="section-label">경쟁사 위치 <span class="rank-of">(반경 1km 내 3곳)</span></div>
+      <div class="map-card">
+        <svg viewBox="0 0 320 220" class="map-svg">
+          <rect x="0" y="0" width="320" height="220" class="map-bg"/>
+          <line x1="0" y1="55" x2="320" y2="55" class="map-street"/>
+          <line x1="0" y1="150" x2="320" y2="150" class="map-street"/>
+          <line x1="90" y1="0" x2="90" y2="220" class="map-street"/>
+          <line x1="230" y1="0" x2="230" y2="220" class="map-street"/>
+
+          <circle cx="220" cy="90" r="16" class="map-pin comp" onclick="openModal('A')" style="cursor:pointer"/>
+          <text x="220" y="95" class="map-pin-label" text-anchor="middle" onclick="openModal('A')" style="cursor:pointer">A</text>
+          <text x="220" y="118" class="map-name" text-anchor="middle">폴리스팬케이크</text>
+
+          <circle cx="130" cy="170" r="16" class="map-pin comp" onclick="openModal('B')" style="cursor:pointer"/>
+          <text x="130" y="175" class="map-pin-label" text-anchor="middle" onclick="openModal('B')" style="cursor:pointer">B</text>
+          <text x="130" y="198" class="map-name" text-anchor="middle">베리블리스</text>
+
+          <circle cx="60" cy="95" r="16" class="map-pin comp" onclick="openModal('C')" style="cursor:pointer"/>
+          <text x="60" y="100" class="map-pin-label" text-anchor="middle" onclick="openModal('C')" style="cursor:pointer">C</text>
+          <text x="60" y="122" class="map-name" text-anchor="middle">코코넛박스</text>
+
+          <circle cx="155" cy="105" r="19" class="map-pin mine"/>
+          <text x="155" y="110" class="map-pin-label mine" text-anchor="middle">★</text>
+          <text x="155" y="135" class="map-name mine" text-anchor="middle">롱베케이션 (우리)</text>
+        </svg>
+        <div class="map-note">※ 정확한 좌표 연동 전까지는 상대적 위치를 보여주는 개념도예요</div>
+      </div>
+
+      <div class="compA-card" onclick="openModal('A')" style="cursor:pointer">
+        <div class="compA-head">
+          <span class="compA-badge">A</span>
+          <div class="compA-title">
+            <span class="compA-name">폴리스팬케이크 연남점</span>
+            <span class="compA-rating">★ 4.93 <span class="compA-count">· 리뷰 430개</span></span>
+          </div>
+        </div>
+        <div class="compA-tags">
+          <span class="tag-pill">디저트가 맛있어요 1,571건</span>
+          <span class="tag-pill">커피가 맛있어요 765건</span>
+          <span class="tag-pill">친절해요 646건</span>
+        </div>
+        <div class="compA-bar-row">
+          <span class="cbr-label">평균 평점</span>
+          <div class="bar-track"><div class="bar-fill comp" style="width:98.6%"></div></div>
+          <span class="cbr-pct">4.93</span>
+        </div>
+      </div>
+
+      <div class="compA-card" onclick="openModal('B')" style="cursor:pointer">
+        <div class="compA-head">
+          <span class="compA-badge">B</span>
+          <div class="compA-title">
+            <span class="compA-name">베리블리스</span>
+            <span class="compA-rating">★ 4.91 <span class="compA-count">· 리뷰 637개</span></span>
+          </div>
+        </div>
+        <div class="compA-tags">
+          <span class="tag-pill">디저트가 맛있어요 3,422건</span>
+          <span class="tag-pill">음료가 맛있어요 2,062건</span>
+          <span class="tag-pill">인테리어가 멋져요 1,509건</span>
+        </div>
+        <div class="compA-bar-row">
+          <span class="cbr-label">평균 평점</span>
+          <div class="bar-track"><div class="bar-fill comp" style="width:98.2%"></div></div>
+          <span class="cbr-pct">4.91</span>
+        </div>
+      </div>
+
+      <div class="compA-card" onclick="openModal('C')" style="cursor:pointer">
+        <div class="compA-head">
+          <span class="compA-badge">C</span>
+          <div class="compA-title">
+            <span class="compA-name">코코넛박스 카페</span>
+            <span class="compA-rating">★ 4.78 <span class="compA-count">· 리뷰 801개</span></span>
+          </div>
+        </div>
+        <div class="compA-tags">
+          <span class="tag-pill">인테리어가 멋져요 6,398건</span>
+          <span class="tag-pill">디저트가 맛있어요 4,306건</span>
+          <span class="tag-pill">사진이 잘 나와요 3,945건</span>
+        </div>
+        <div class="compA-bar-row">
+          <span class="cbr-label">평균 평점</span>
+          <div class="bar-track"><div class="bar-fill comp" style="width:95.6%"></div></div>
+          <span class="cbr-pct">4.78</span>
+        </div>
+      </div>
+
+      <div class="section-label">반경 1km · 동종업종 3곳</div>
+
+      <div class="compare-card">
+        <div class="compare-head">
+          <h3>디저트가 맛있어요</h3>
+          <span class="badge ours">우리 강점</span>
+        </div>
+        <div class="bar-row">
+          <div class="bar-row-top"><span class="nm">롱베케이션 (우리)</span><span>921건</span></div>
+          <div class="bar-track"><div class="bar-fill us" style="width:92%"></div></div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-row-top"><span class="nm">폴리스팬케이크 연남점</span><span>430건</span></div>
+          <div class="bar-track"><div class="bar-fill comp" style="width:43%"></div></div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-row-top"><span class="nm">베리블리스</span><span>210건</span></div>
+          <div class="bar-track"><div class="bar-fill comp" style="width:21%"></div></div>
+        </div>
+      </div>
+
+      <div class="compare-card">
+        <div class="compare-head">
+          <h3>웨이팅</h3>
+          <span class="badge warn">주의 필요</span>
+        </div>
+        <div class="bar-row">
+          <div class="bar-row-top"><span class="nm">롱베케이션 (우리)</span><span>평균 12분</span></div>
+          <div class="bar-track"><div class="bar-fill us" style="width:60%"></div></div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-row-top"><span class="nm">폴리스팬케이크 연남점</span><span>평균 4분</span></div>
+          <div class="bar-track"><div class="bar-fill comp" style="width:20%"></div></div>
+        </div>
+        <div class="gap-highlight">
+          리뷰 22건에서 <b>대기시간</b>에 대한 언급이 발견됐어요. 경쟁 매장 대비 웨이팅이 긴 편이라, 좌석 회전이나 예약제 도입을 검토해볼 만해요.
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 04 마케팅 ============ -->
+    <section class="screen chat-screen" id="market">
+      <div class="chat-log" id="chatLog">
+
+        <div class="chat-row bot">
+          <span class="chat-avatar">AI</span>
+          <div class="chat-bubble bot">
+            안녕하세요, 롱베케이션 사장님! 데이터 기반으로 마케팅을 도와드릴게요. 아래 버튼을 눌러보시거나, 궁금한 걸 편하게 물어보세요.
+          </div>
+        </div>
+
+        <div class="chat-row user">
+          <div class="chat-bubble user">우리 가게 마케팅 문구 좀 만들어줘</div>
+        </div>
+
+        <div class="chat-row bot">
+          <span class="chat-avatar">AI</span>
+          <div class="chat-bubble bot">
+            <div class="chat-source">근거 · "디저트가 맛있어요" 921건 언급 (경쟁사 대비 2배 이상) · 리뷰 18건에서 "교토 말차" 직접 언급</div>
+            톤별로 3가지 준비했어요. 마음에 드는 걸 복사해서 바로 쓰세요.
+
+            <div class="tone-tabs chat-tone-tabs">
+              <span class="sel" onclick="switchMarketTone('emotional', this)">감성적</span>
+              <span onclick="switchMarketTone('casual', this)">캐주얼</span>
+              <span onclick="switchMarketTone('value', this)">가성비 강조</span>
+            </div>
+
+            <div class="copy-card chat-copy-card" id="toneCopyCard">
+              <div class="cc-label">인스타그램 캡션</div>
+              <p id="toneCopyText">"교토에서 온 말차 한 스푼, 연남동 골목 안 작은 휴가.<br>롱베케이션에서 잠시 쉬어가세요 🍵"</p>
+              <div class="cc-foot">
+                <span class="cc-src" id="toneCopyTag">#연남동카페 #말차디저트</span>
+                <button class="copy-btn">복사하기</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="chat-quick-row">
+        <span class="chat-chip" onclick="sendQuickMsg('경쟁사 대비 강점 알려줘')">경쟁사 대비 강점 알려줘</span>
+        <span class="chat-chip" onclick="sendQuickMsg('리뷰 답글 초안 써줘')">리뷰 답글 초안 써줘</span>
+        <span class="chat-chip" onclick="sendQuickMsg('이번 주 이벤트 아이디어')">이번 주 이벤트 아이디어</span>
+      </div>
+
+      <div class="chat-input-row">
+        <input type="text" id="chatInput" placeholder="궁금한 걸 물어보세요">
+        <button class="chat-send-btn" onclick="sendChatMsg()">↑</button>
+      </div>
+    </section>
+
+    <!-- ============ 05 상권 ============ -->
+    <section class="screen" id="market_area">
+      <div class="area-header">
+        <span class="area-loc">서울 마포구 동교동 · 커피-음료</span>
+        <span class="area-quarter">2026년 2분기 기준</span>
+      </div>
+
+      <div class="opinion-card">
+        <div class="oc-label">종합 의견</div>
+        <p>점포수가 전년동기 대비 감소하는 <b>쇠퇴 국면</b>이지만, 매출은 자치구 평균보다 <b>증가 추세</b>예요. 유동인구도 늘고 있어 활성화된 상권이지만, 그만큼 경쟁 매장 출현에 유의할 필요가 있어요.</p>
+      </div>
+
+      <div class="section-label">핵심 지표</div>
+      <div class="stat-grid">
+        <div class="stat-mini">
+          <span class="sm-label">점포수</span>
+          <span class="sm-val">1,067<small>개</small></span>
+          <span class="sm-delta down">전분기 −13개</span>
+        </div>
+        <div class="stat-mini">
+          <span class="sm-label">3년 생존율</span>
+          <span class="sm-val">39.9<small>%</small></span>
+          <span class="sm-delta down">전분기 −1.87%p</span>
+        </div>
+        <div class="stat-mini">
+          <span class="sm-label">평균 영업기간</span>
+          <span class="sm-val">3<small>년</small></span>
+          <span class="sm-delta neutral">서울시 평균과 동일</span>
+        </div>
+        <div class="stat-mini">
+          <span class="sm-label">월평균 매출</span>
+          <span class="sm-val">1,542<small>만원</small></span>
+          <span class="sm-delta up">전분기 +148만원</span>
+        </div>
+        <div class="stat-mini">
+          <span class="sm-label">일평균 유동인구</span>
+          <span class="sm-val">311.7<small>천명</small></span>
+          <span class="sm-delta up">전분기 +1,592명</span>
+        </div>
+        <div class="stat-mini">
+          <span class="sm-label">1층 임대시세</span>
+          <span class="sm-val">25.1<small>만원</small></span>
+          <span class="sm-delta warn">자치구보다 +8.6만원</span>
+        </div>
+      </div>
+
+      <div class="section-label">자치구 내 순위 <span class="rank-of">(16개 행정동 중)</span></div>
+      <div class="rank-row">
+        <div class="rank-chip gold">
+          <span class="rc-num">1위</span>
+          <span class="rc-label">점포수</span>
+        </div>
+        <div class="rank-chip">
+          <span class="rc-num">2위</span>
+          <span class="rc-label">매출액</span>
+        </div>
+        <div class="rank-chip">
+          <span class="rc-num">4위</span>
+          <span class="rc-label">유동인구</span>
+        </div>
+      </div>
+
+      <div class="section-label">5분기 추이 <span class="rank-of">(2025.2Q~2026.2Q)</span></div>
+
+      <div class="trend-card">
+        <div class="metric-chips">
+          <span class="chip sel" data-metric="stores">점포수</span>
+          <span class="chip" data-metric="txns">매출건수</span>
+          <span class="chip" data-metric="sales">매출액</span>
+          <span class="chip" data-metric="foot">유동인구</span>
+        </div>
+        <div class="trend-head" id="trendHead"><span>점포수 (개)</span><span class="trend-tag down">꾸준한 감소세</span></div>
+
+        <div class="line-set metric-set" data-metric="stores">
+          <svg viewBox="0 0 300 100" class="line-svg" preserveAspectRatio="none">
+            <line x1="15" y1="35" x2="295" y2="35" class="grid-line"/>
+            <line x1="15" y1="62" x2="295" y2="62" class="grid-line"/>
+            <line x1="15" y1="89" x2="295" y2="89" class="grid-line"/>
+            <polyline points="15,35 85,41.6 155,44.4 225,48.2 295,53.2" class="trend-line down"/>
+            <circle cx="15" cy="35" r="2.6" class="trend-dot down"/>
+            <circle cx="85" cy="41.6" r="2.6" class="trend-dot down"/>
+            <circle cx="155" cy="44.4" r="2.6" class="trend-dot down"/>
+            <circle cx="225" cy="48.2" r="2.6" class="trend-dot down"/>
+            <circle cx="295" cy="53.2" r="4.5" class="trend-dot down last"/>
+            <text x="15" y="26" class="line-val">1,118</text>
+            <text x="85" y="33" class="line-val">1,099</text>
+            <text x="155" y="36" class="line-val">1,091</text>
+            <text x="225" y="40" class="line-val">1,080</text>
+            <text x="295" y="70" class="line-val strong" text-anchor="end">1,067</text>
+          </svg>
+          <div class="area-labels"><span>25.2Q</span><span>25.3Q</span><span>25.4Q</span><span>26.1Q</span><span>26.2Q</span></div>
+        </div>
+
+        <div class="line-set metric-set" data-metric="txns" style="display:none">
+          <svg viewBox="0 0 300 100" class="line-svg" preserveAspectRatio="none">
+            <line x1="15" y1="35" x2="295" y2="35" class="grid-line"/>
+            <line x1="15" y1="62" x2="295" y2="62" class="grid-line"/>
+            <line x1="15" y1="89" x2="295" y2="89" class="grid-line"/>
+            <polyline points="15,35 85,37.8 155,48.8 225,58.1 295,42.2" class="trend-line up"/>
+            <circle cx="15" cy="35" r="2.6" class="trend-dot up"/>
+            <circle cx="85" cy="37.8" r="2.6" class="trend-dot up"/>
+            <circle cx="155" cy="48.8" r="2.6" class="trend-dot up"/>
+            <circle cx="225" cy="58.1" r="2.6" class="trend-dot up"/>
+            <circle cx="295" cy="42.2" r="4.5" class="trend-dot up last"/>
+            <text x="15" y="26" class="line-val">1,740</text>
+            <text x="85" y="29" class="line-val">1,702</text>
+            <text x="155" y="41" class="line-val">1,522</text>
+            <text x="225" y="50" class="line-val">1,364</text>
+            <text x="295" y="30" class="line-val strong" text-anchor="end">1,627</text>
+          </svg>
+          <div class="area-labels"><span>25.2Q</span><span>25.3Q</span><span>25.4Q</span><span>26.1Q</span><span>26.2Q</span></div>
+        </div>
+
+        <div class="line-set metric-set" data-metric="sales" style="display:none">
+          <svg viewBox="0 0 300 100" class="line-svg" preserveAspectRatio="none">
+            <line x1="15" y1="35" x2="295" y2="35" class="grid-line"/>
+            <line x1="15" y1="62" x2="295" y2="62" class="grid-line"/>
+            <line x1="15" y1="89" x2="295" y2="89" class="grid-line"/>
+            <polyline points="15,36.7 85,35 155,38.3 225,40.5 295,35.6" class="trend-line up"/>
+            <circle cx="15" cy="36.7" r="2.6" class="trend-dot up"/>
+            <circle cx="85" cy="35" r="2.6" class="trend-dot up"/>
+            <circle cx="155" cy="38.3" r="2.6" class="trend-dot up"/>
+            <circle cx="225" cy="40.5" r="2.6" class="trend-dot up"/>
+            <circle cx="295" cy="35.6" r="4.5" class="trend-dot up last"/>
+            <text x="15" y="28" class="line-val">1,498</text>
+            <text x="85" y="26" class="line-val">1,543</text>
+            <text x="155" y="30" class="line-val">1,450</text>
+            <text x="225" y="32" class="line-val">1,394</text>
+            <text x="295" y="27" class="line-val strong" text-anchor="end">1,542</text>
+          </svg>
+          <div class="area-labels"><span>25.2Q</span><span>25.3Q</span><span>25.4Q</span><span>26.1Q</span><span>26.2Q</span></div>
+        </div>
+
+        <div class="line-set metric-set" data-metric="foot" style="display:none">
+          <svg viewBox="0 0 300 100" class="line-svg" preserveAspectRatio="none">
+            <line x1="15" y1="35" x2="295" y2="35" class="grid-line"/>
+            <line x1="15" y1="62" x2="295" y2="62" class="grid-line"/>
+            <line x1="15" y1="89" x2="295" y2="89" class="grid-line"/>
+            <polyline points="15,50 85,50 155,44.5 225,50 295,35" class="trend-line up"/>
+            <circle cx="15" cy="50" r="2.6" class="trend-dot up"/>
+            <circle cx="85" cy="50" r="2.6" class="trend-dot up"/>
+            <circle cx="155" cy="44.5" r="2.6" class="trend-dot up"/>
+            <circle cx="225" cy="50" r="2.6" class="trend-dot up"/>
+            <circle cx="295" cy="35" r="4.5" class="trend-dot up last"/>
+            <text x="15" y="41" class="line-val">90.8천</text>
+            <text x="85" y="41" class="line-val">90.2천</text>
+            <text x="155" y="36" class="line-val">91.4천</text>
+            <text x="225" y="41" class="line-val">90.7천</text>
+            <text x="295" y="27" class="line-val strong" text-anchor="end">92.3천</text>
+          </svg>
+          <div class="area-labels"><span>25.2Q</span><span>25.3Q</span><span>25.4Q</span><span>26.1Q</span><span>26.2Q</span></div>
+        </div>
+      </div>
+
+      <div class="section-label">요일별 매출 랭킹</div>
+      <div class="rank-list-card">
+        <div class="rank-list-row">
+          <span class="rl-medal gold">1</span><span class="rl-day">토요일</span>
+          <div class="rl-track"><div class="rl-fill gold" style="width:100%"></div></div>
+          <span class="rl-pct">21.1%</span>
+        </div>
+        <div class="rank-list-row">
+          <span class="rl-medal">2</span><span class="rl-day">일요일</span>
+          <div class="rl-track"><div class="rl-fill" style="width:79.6%"></div></div>
+          <span class="rl-pct">16.8%</span>
+        </div>
+        <div class="rank-list-row">
+          <span class="rl-medal">3</span><span class="rl-day">금요일</span>
+          <div class="rl-track"><div class="rl-fill" style="width:72%"></div></div>
+          <span class="rl-pct">15.2%</span>
+        </div>
+        <div class="rank-list-row">
+          <span class="rl-medal">4</span><span class="rl-day">화요일</span>
+          <div class="rl-track"><div class="rl-fill" style="width:57.3%"></div></div>
+          <span class="rl-pct">12.1%</span>
+        </div>
+        <div class="rank-list-row">
+          <span class="rl-medal">5</span><span class="rl-day">수요일</span>
+          <div class="rl-track"><div class="rl-fill" style="width:56.4%"></div></div>
+          <span class="rl-pct">11.9%</span>
+        </div>
+        <div class="rank-list-row">
+          <span class="rl-medal">5</span><span class="rl-day">목요일</span>
+          <div class="rl-track"><div class="rl-fill" style="width:56.4%"></div></div>
+          <span class="rl-pct">11.9%</span>
+        </div>
+        <div class="rank-list-row">
+          <span class="rl-medal">7</span><span class="rl-day">월요일</span>
+          <div class="rl-track"><div class="rl-fill" style="width:52.6%"></div></div>
+          <span class="rl-pct">11.1%</span>
+        </div>
+      </div>
+
+      <div class="section-label">시간대별 매출 비중</div>
+      <div class="area-chart-card">
+        <svg viewBox="0 0 320 110" class="area-svg" preserveAspectRatio="none">
+          <line x1="20" y1="20" x2="300" y2="20" class="grid-line"/>
+          <line x1="20" y1="60" x2="300" y2="60" class="grid-line"/>
+          <line x1="20" y1="100" x2="300" y2="100" class="grid-line"/>
+          <path d="M20,100.7 L20,100.7 76,86.9 132,38.1 188,24.8 244,26.9 300,86.9 L300,100.7 Z" class="area-fill"/>
+          <polyline points="20,100.7 76,86.9 132,38.1 188,24.8 244,26.9 300,86.9" class="area-line"/>
+          <circle cx="188" cy="24.8" r="3.5" class="area-peak"/>
+        </svg>
+        <div class="area-labels">
+          <span>00~06시</span><span>06~11시</span><span>11~14시</span><span class="peak-x">14~17시</span><span>17~21시</span><span>21~24시</span>
+        </div>
+        <div class="area-note">오후 14~17시에 매출 비중이 <b>30.2%</b>로 가장 높아요</div>
+      </div>
+
+      <div class="section-label">성별 매출 비중</div>
+      <div class="donut-row-card">
+        <div class="donut-wrap sm">
+          <div class="donut" style="background: conic-gradient(var(--moss-deep) 0% 62.1%, var(--paper-deep) 62.1% 100%);"></div>
+          <div class="donut-hole sm">
+            <span class="donut-num sm">62.1<small>%</small></span>
+            <span class="donut-sub">여성</span>
+          </div>
+        </div>
+        <div class="donut-legend">
+          <div class="dl-row"><span class="dl-dot" style="background:var(--moss-deep)"></span>여성 <b>62.1%</b></div>
+          <div class="dl-row"><span class="dl-dot" style="background:var(--paper-deep)"></span>남성 <b>37.9%</b></div>
+          <div class="dl-note">여성 고객 방문에 도움되는 요소에 투자를 고려해보세요</div>
+        </div>
+      </div>
+
+      <div class="mini-donut-row">
+        <div class="mini-donut-item">
+          <div class="donut-wrap xs"><div class="donut" style="background:conic-gradient(var(--moss-deep) 0% 50%, var(--paper-deep) 50% 100%);"></div><div class="donut-hole xs"><span class="donut-num xs">50<small>%</small></span></div></div>
+          <span class="mdi-label">외식업 (여성)</span>
+        </div>
+        <div class="mini-donut-item">
+          <div class="donut-wrap xs"><div class="donut" style="background:conic-gradient(var(--moss-deep) 0% 65.7%, var(--paper-deep) 65.7% 100%);"></div><div class="donut-hole xs"><span class="donut-num xs">65.7<small>%</small></span></div></div>
+          <span class="mdi-label">서비스업 (여성)</span>
+        </div>
+        <div class="mini-donut-item">
+          <div class="donut-wrap xs"><div class="donut" style="background:conic-gradient(var(--moss-deep) 0% 58.6%, var(--paper-deep) 58.6% 100%);"></div><div class="donut-hole xs"><span class="donut-num xs">58.6<small>%</small></span></div></div>
+          <span class="mdi-label">소매업 (여성)</span>
+        </div>
+      </div>
+
+      <div class="section-label">연령대별 외식업 매출 비중</div>
+      <div class="lollipop-card">
+        <div class="lp-row"><span class="lp-age">10대</span><div class="lp-track"><div class="lp-stem" style="width:7%"></div><div class="lp-dot" style="left:7%"></div></div><span class="lp-val">2.8%</span></div>
+        <div class="lp-row"><span class="lp-age">20대</span><div class="lp-track"><div class="lp-stem peak" style="width:100%"></div><div class="lp-dot peak" style="left:100%"></div></div><span class="lp-val peak">39.4%</span></div>
+        <div class="lp-row"><span class="lp-age">30대</span><div class="lp-track"><div class="lp-stem" style="width:72%"></div><div class="lp-dot" style="left:72%"></div></div><span class="lp-val">28.5%</span></div>
+        <div class="lp-row"><span class="lp-age">40대</span><div class="lp-track"><div class="lp-stem" style="width:31%"></div><div class="lp-dot" style="left:31%"></div></div><span class="lp-val">12.4%</span></div>
+        <div class="lp-row"><span class="lp-age">50대</span><div class="lp-track"><div class="lp-stem" style="width:29%"></div><div class="lp-dot" style="left:29%"></div></div><span class="lp-val">11.4%</span></div>
+        <div class="lp-row"><span class="lp-age">60대+</span><div class="lp-track"><div class="lp-stem" style="width:14%"></div><div class="lp-dot" style="left:14%"></div></div><span class="lp-val">5.6%</span></div>
+      </div>
+
+      <div class="section-label">성별·연령별 유동인구 비중</div>
+      <div class="trend-card">
+        <div class="gb-legend"><span><span class="dl-dot" style="background:var(--paper-deep)"></span>남성</span><span><span class="dl-dot" style="background:var(--moss-deep)"></span>여성</span></div>
+        <div class="grouped-bars">
+          <div class="gb-col">
+            <div class="gb-pair">
+              <div class="gb-bar-wrap"><span class="gb-val">4.8</span><div class="gb-bar male" style="height:23%"></div></div>
+              <div class="gb-bar-wrap"><span class="gb-val">6.3</span><div class="gb-bar female" style="height:31%"></div></div>
+            </div>
+            <span class="mb-x">10대</span>
+          </div>
+          <div class="gb-col">
+            <div class="gb-pair">
+              <div class="gb-bar-wrap"><span class="gb-val">13.2</span><div class="gb-bar male" style="height:64%"></div></div>
+              <div class="gb-bar-wrap"><span class="gb-val">20.5</span><div class="gb-bar female" style="height:100%"></div></div>
+            </div>
+            <span class="mb-x">20대</span>
+          </div>
+          <div class="gb-col">
+            <div class="gb-pair">
+              <div class="gb-bar-wrap"><span class="gb-val">9.3</span><div class="gb-bar male" style="height:45%"></div></div>
+              <div class="gb-bar-wrap"><span class="gb-val">10.5</span><div class="gb-bar female" style="height:51%"></div></div>
+            </div>
+            <span class="mb-x">30대</span>
+          </div>
+          <div class="gb-col">
+            <div class="gb-pair">
+              <div class="gb-bar-wrap"><span class="gb-val">7.5</span><div class="gb-bar male" style="height:37%"></div></div>
+              <div class="gb-bar-wrap"><span class="gb-val">7.0</span><div class="gb-bar female" style="height:34%"></div></div>
+            </div>
+            <span class="mb-x">40대</span>
+          </div>
+          <div class="gb-col">
+            <div class="gb-pair">
+              <div class="gb-bar-wrap"><span class="gb-val">5.1</span><div class="gb-bar male" style="height:25%"></div></div>
+              <div class="gb-bar-wrap"><span class="gb-val">5.1</span><div class="gb-bar female" style="height:25%"></div></div>
+            </div>
+            <span class="mb-x">50대</span>
+          </div>
+          <div class="gb-col">
+            <div class="gb-pair">
+              <div class="gb-bar-wrap"><span class="gb-val">4.3</span><div class="gb-bar male" style="height:21%"></div></div>
+              <div class="gb-bar-wrap"><span class="gb-val">6.4</span><div class="gb-bar female" style="height:31%"></div></div>
+            </div>
+            <span class="mb-x">60대+</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-label">매출이 잘 나오는 타이밍</div>
+      <div class="peak-card">
+        <div class="peak-row">
+          <span class="peak-ic">📅</span>
+          <div>
+            <div class="peak-title">토요일 매출 비중 21.1%</div>
+            <div class="peak-sub">주말·원거리 고객 대상 마케팅이 효과적이에요</div>
+          </div>
+        </div>
+        <div class="peak-row">
+          <span class="peak-ic">🕒</span>
+          <div>
+            <div class="peak-title">14~17시 매출이 가장 높음</div>
+            <div class="peak-sub">오후 타임 프로모션을 고려해볼 만해요</div>
+          </div>
+        </div>
+        <div class="peak-row">
+          <span class="peak-ic">👥</span>
+          <div>
+            <div class="peak-title">여성 고객 매출 비중 62.1%</div>
+            <div class="peak-sub">여성 고객 타깃 메뉴·이벤트에 투자 여지</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="source-note">출처 · 서울신용보증재단 상권분석 리포트 (report.docx 자동 파싱). 카드사 추정 매출 기반이라 실제와 차이가 있을 수 있어요.</div>
+    </section>
+
+  </main>
+
+  <nav class="tabs bottom-tabs">
+    <button class="active" onclick="showScreen('home', this)"><span class="num">01</span>홈</button>
+    <button onclick="showScreen('ledger', this)"><span class="num">02</span>장부</button>
+    <button onclick="showScreen('compare', this)"><span class="num">03</span>비교</button>
+    <button onclick="showScreen('market', this)"><span class="num">04</span>마케팅</button>
+    <button onclick="showScreen('market_area', this)"><span class="num">05</span>상권</button>
+  </nav>
+
+  <!-- ============ 경쟁사 상세 모달 ============ -->
+  <div class="modal-overlay" id="storeModal" onclick="if(event.target===this) closeModal()">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+      <div id="modalBody"><!-- JS로 채워짐 --></div>
+    </div>
+  </div>
+
+  <!-- ============ 지출 수정 모달 ============ -->
+  <div class="modal-overlay" id="expenseModal" onclick="if(event.target===this) closeExpenseEdit()">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <button class="modal-close" onclick="closeExpenseEdit()">✕</button>
+      <div class="md-section-label" style="margin-top:0">지출 내역 수정</div>
+
+      <div class="field">
+        <label>카테고리</label>
+        <select id="editCategory">
+          <option>재료 구입</option><option>임대료</option><option>인건비</option>
+          <option>공과금</option><option>카드수수료</option><option>세금</option><option>기타</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>거래처 (선택)</label>
+        <input type="text" id="editVendor" placeholder="예: 연남원두상회">
+      </div>
+      <div class="field">
+        <label>금액 (원)</label>
+        <input type="text" id="editAmount" placeholder="예: 340000">
+      </div>
+      <div class="field">
+        <label>결제수단</label>
+        <div class="chip-row" id="editPaymentChips">
+          <span class="chip" data-val="카드">카드</span>
+          <span class="chip" data-val="현금">현금</span>
+          <span class="chip" data-val="계좌이체">계좌이체</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>메모 (선택)</label>
+        <input type="text" id="editMemo" placeholder="메모">
+      </div>
+
+      <button class="submit-btn" onclick="saveExpenseEdit()">수정 저장</button>
+      <button class="delete-btn" onclick="deleteExpenseEdit()">이 지출 삭제하기</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function showScreen(id, btn){
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+const storeDetails = {
+  A: {
+    name: "폴리스팬케이크 연남점", rating: 4.93, reviewCount: 430,
+    intro: "연남동카페 '폴리스팬케이크'는 2010년 홍대에 처음 오픈했습니다. 국내 최초로 <더치베이비 팬케이크>를 폴리만의 레시피와 디자인으로 선보이며 많은 사랑을 받았고, 2020년 6월 연남동으로 이전했습니다.",
+    briefing: "폴리스팬케이크 연남점은 다양한 토핑의 더치베이비 팬케이크가 인기인 연남동 디저트 카페입니다.",
+    menu: [["스트로베리 더치베이비 (시즌)", "16,800원"], ["수제쿠키 더치베이비", "16,800원"], ["복숭아 더치베이비", "17,800원"], ["솔티드카라멜 더치베이비", "17,800원"]],
+    tags: ["디저트가 맛있어요 1,571건", "커피가 맛있어요 765건", "친절해요 646건"],
+    amenities: ["무선 인터넷"], parking: "가능", seating: [], sns: "인스타그램",
+    reviews: [
+      { rating:"5.0", meta:"점심 · 바로 입장 · 1번째 방문", text:"빠삭하고 맛있어요 겉에 크럼블같은게 식감이 좋고 커피도 맛있고 아이스크림이랑 같이먹으면 너무너무 맛있어요", date:"8.9 · 일요일" },
+      { rating:"5.0", meta:"점심 · 바로 입장 · 1번째 방문", text:"맛있고 분위기도 좋아요! 더치베이비 팬케이크는 처음인데 너무 맛있었습니다~!", date:"4.19 · 일요일" },
+      { rating:null, meta:"점심 · 바로 입장 · 1번째 방문", text:"이게 말만 팬케이크고 완전 다르게 맛있네요 담엔 아이스크림도 먹어볼게요", date:"3.14 · 토요일" }
+    ],
+    wordCloud: [
+      {w:"팬케이크", size:24, top:"14%", left:"8%", rot:-3, color:"var(--moss-deep)"},
+      {w:"분위기", size:16, top:"10%", left:"60%", rot:4, color:"var(--ink)"},
+      {w:"디저트", size:14, top:"55%", left:"6%", rot:2, color:"var(--ink-soft)"},
+      {w:"사장님", size:15, top:"62%", left:"55%", rot:-4, color:"var(--ink)"},
+      {w:"크럼블", size:12, top:"30%", left:"35%", rot:1, color:"var(--ink-soft)"}
+    ],
+    strength: "'팬케이크'라는 명확한 시그니처 메뉴 하나로 승부하고 있어요. 국내 최초 더치베이비 팬케이크라는 스토리와, 사장님이 직접 언급될 만큼 개인화된 서비스가 강점이에요.",
+    diff: "우리 매장은 '천천히·조용한·여유'라는 분위기 중심 키워드인 반면, 이 매장은 '팬케이크'라는 메뉴 중심 키워드로 기억돼요. 조용히 머무는 손님보다는 특정 메뉴를 먹으러 오는 목적성 방문객이 많아 보여요 — 직접 경쟁보다는 손님 유형 자체가 달라요.",
+    moreReviews: [
+      { rating:"5.0", meta:"점심 · 바로 입장 · 1번째 방문", text:"팬케이크 종류가 많아서 골라먹기 좋아요! 시즌별 메뉴도 있고 커피도 맛있어요", date:"8.16 · 일요일" },
+      { rating:"5.0", meta:"점심 · 바로 입장 · 1번째 방문", text:"더치베이비 완전 맛있고 사장님도 너무 친절하셔서 너무 좋아요!!", date:"4.7 · 화요일" },
+      { rating:"5.0", meta:"저녁 · 바로 입장 · 1번째 방문", text:"팬케이크 너무 맛있고 음료수도 너무 맛있어용 👍👍👍", date:"7.25 · 토요일" },
+      { rating:"5.0", meta:"점심 · 바로 입장 · 1번째 방문", text:"비주얼부터 맛있어보여서 찾아왔는데 역시 너무 맛있었어요. 사장님도 친절하시고 화장실도 깨끗합니다!", date:"4.20 · 월요일" },
+      { rating:"5.0", meta:"점심 · 바로 입장 · 1번째 방문", text:"맛있게 먹은 기억이 있어서 재방문합니다. 항상 친절하시고 맛도 좋아요!! 당 떨어지면 찾는 곳!!", date:"7.4 · 토요일" }
+    ]
+  },
+  B: {
+    name: "베리블리스", rating: 4.91, reviewCount: 637,
+    intro: "베리블리스는 신선한 과일로 건강을 위해 정성담아 손수 만든 맛있는 과일 음료와 디저트를 맛볼 수 있는 프리미엄 과일카페입니다. 한국 과일소믈리에 협회 인증 소믈리에가 시즌별로 과일을 컨택 바잉합니다.",
+    briefing: "베리블리스는 홍대입구역 근처의 넓은 카페로, 수플레 팬케이크와 딸기 파르페 등 다양한 디저트를 제공합니다.",
+    menu: [["복자 모찌 수플레 팬케이크", "변동"], ["복숭아밭 수플레 팬케이크", "변동"], ["생복숭아 타르트", "13,800원"], ["여름 시그니처 복숭아 파르페", "변동"]],
+    tags: ["디저트가 맛있어요 3,422건", "음료가 맛있어요 2,062건", "인테리어가 멋져요 1,509건"],
+    amenities: ["단체 이용 가능", "포장", "무선 인터넷"], parking: "가능", seating: [], sns: "인스타그램",
+    reviews: [
+      { rating:"5.0", meta:"점심 · 바로 입장 · 1번째 방문", text:"매장 인테리어가 너무 예쁘고 넓고 직원분 칭찬 하십니다. 수플레 팬케익도 예쁘고 맛있어요. 복숭아도 엄청 많이 올라가 있습니다.", date:"6.30 · 화요일" },
+      { rating:"5.0", meta:"점심 · 바로 입장 · 1번째 방문", text:"제주 한라봉 스무디 시켰습니다! 상큼해서 갈증 해소하기 좋았어요!!", date:"5.16 · 토요일" },
+      { rating:"5.0", meta:"점심 · 바로 입장 · 1번째 방문", text:"작년에 처음 먹고 계속 생각나서 올해 또 먹으러 왔는데 여전히 맛있어요! 매장도 깔끔하고 직원분들도 친절하십니당", date:"7.29 · 수요일" }
+    ],
+    wordCloud: [
+      {w:"수플레", size:23, top:"12%", left:"10%", rot:-2, color:"var(--moss-deep)"},
+      {w:"딸기", size:21, top:"55%", left:"58%", rot:3, color:"var(--ink)"},
+      {w:"디저트", size:17, top:"10%", left:"62%", rot:-5, color:"var(--ink-soft)"},
+      {w:"복숭아", size:15, top:"60%", left:"10%", rot:2, color:"var(--ink)"},
+      {w:"골목", size:13, top:"35%", left:"38%", rot:-2, color:"var(--ink-soft)"}
+    ],
+    strength: "제철 과일(딸기·복숭아)을 활용한 시즌 디저트가 핵심 강점이에요. '디저트가 맛있어요' 언급이 3,422건으로 우리 매장(921건)의 3.7배에 달할 만큼, 디저트 자체의 화제성이 압도적이에요.",
+    diff: "디저트 언급량에서 정면 승부는 불리해요. 다만 이 매장은 '넓고' '과일 전문'이라는 색이 뚜렷한 반면, 우리 매장은 '아늑하고 조용한 공간'이 강점이라 겹치는 손님층이 크지 않아요. 디저트보다는 '오래 머물 수 있는 공간'으로 차별화하는 게 유리해요.",
+    moreReviews: [
+      { rating:"5.0", meta:"밤 · 1번째 방문", text:"화이트 톤 가구들이 많은데도 먼지나 얼룩 없이 아주 정갈하게 관리되고 있어요. 통창으로 들어오는 자연 채광이 워낙 좋아서 매장 전체가 화사해요.", date:"5.20 · 수요일" },
+      { rating:null, meta:"저녁 · 1번째 방문", text:"처음 와봤는데 비싸긴 하지만 맛은 있습니다", date:"2.22 · 일요일" },
+      { rating:"5.0", meta:"점심 · 1번째 방문", text:"딸기모찌수플레 너무 맛있고 매장도 넓고 쾌적해요. 홍대 다시 오면 또 방문하고 싶어요🥰", date:"5.21 · 목요일" },
+      { rating:"5.0", meta:"저녁 · 1번째 방문", text:"카페 분위기가 너무 예쁘고 같이 대화하기 좋아요. 창가 쪽에 앉으면 밖도 보면서 먹을 수 있어서 좋아요", date:"4.17 · 금요일" },
+      { rating:"5.0", meta:"점심 · 1번째 방문", text:"자리도 널찍하고 채광이 좋아서 사진도 잘 나왔어요. 케이크 종류가 다양해서 고르는 재미도 있었어요.", date:"7.28 · 화요일" }
+    ]
+  },
+  C: {
+    name: "코코넛박스 카페", rating: 4.78, reviewCount: 801,
+    intro: "홍대에 위치한 대형 베이커리로, 홍대 최대 규모(600평)의 디저트·케이크 카페입니다. 전문 파티셰와 바리스타가 매일 직접 만들고 있습니다.",
+    briefing: "코코넛박스 카페는 홍대 핫플레이스로, 이국적인 인테리어와 넓은 공간이 특징입니다.",
+    menu: [["코코넛 크림 라떼", "8,500원"], ["라봉", "9,500원"], ["우베라떼 (NEW)", "8,500원"], ["아인슈페너 라떼", "8,000원"]],
+    tags: ["인테리어가 멋져요 6,398건", "디저트가 맛있어요 4,306건", "사진이 잘 나와요 3,945건"],
+    amenities: ["생일/기념일 혜택", "예약", "단체 이용 가능", "무선 인터넷", "포장"], parking: "가능", seating: ["룸", "단체석", "카운터석", "연인석", "1인석"], sns: "인스타그램 · 예약",
+    reviews: [
+      { rating:"5.0", meta:"점심 · 바로 입장 · 1번째 방문", text:"주말인데도 입장이 빨랐고, 주문한 것도 금방 받을 수 있어서 좋았습니다! 음료랑 디저트도 맛있고, 카페 분위기도 진짜 좋아요 :)", date:"7.4 · 토요일" },
+      { rating:"5.0", meta:"점심 · 바로 입장 · 1번째 방문", text:"완전 맛있고 분위기 너무 좋아요!! 추천합니다!! 코코넛음료도 있어요 노래 좋고 넓음", date:"6.7 · 일요일" },
+      { rating:"4.0", meta:"저녁 · 바로 입장 · 1번째 방문", text:"시원하고 분위기가 좋아서 여름에 오기 딱이에요! 음료도 맛있구여", date:"6.24 · 수요일" }
+    ],
+    wordCloud: [
+      {w:"넓어요", size:23, top:"14%", left:"8%", rot:-2, color:"var(--moss-deep)"},
+      {w:"분위기", size:18, top:"55%", left:"55%", rot:3, color:"var(--ink)"},
+      {w:"음료", size:15, top:"12%", left:"62%", rot:-4, color:"var(--ink-soft)"},
+      {w:"아이랑", size:14, top:"62%", left:"10%", rot:2, color:"var(--ink)"},
+      {w:"노래", size:12, top:"35%", left:"36%", rot:-1, color:"var(--ink-soft)"}
+    ],
+    strength: "600평 규모의 압도적인 공간과 이국적인 인테리어가 최대 강점이에요. '아이랑'이라는 단어가 나올 만큼 가족 단위 방문객을 폭넓게 흡수하고 있고, 룸·단체석까지 갖춰 모임 수요까지 커버해요.",
+    diff: "'넓다·아이랑·단체석'처럼 공간과 인원 수용력이 강점인 매장이라, '아늑하고 조용한 1인·연인 손님' 중심인 우리 매장과는 타겟 고객층이 거의 겹치지 않아요. 오히려 '조용히 혼자 또는 둘이 머물고 싶은 손님'을 명확히 겨냥하면 이 매장과 자연스럽게 구분돼요.",
+    moreReviews: [
+      { rating:"5.0", meta:"점심 · 1번째 방문", text:"처음 왔는데 인테리어가 독특해요.", date:"8.17 · 월요일" },
+      { rating:"5.0", meta:"점심 · 1번째 방문", text:"카페가 너무 예쁘고 음료도 디저트들도 맛있어요~ 자주 올게요^^", date:"8.18 · 화요일" },
+      { rating:"4.5", meta:"점심 · 1번째 방문", text:"아이들과 함께 시간 보낼 수 있는 볼풀장이 있어 좋아요. 커피 맛있어요~^^", date:"8.16 · 일요일" },
+      { rating:"5.0", meta:"점심 · 1번째 방문", text:"완전 사진 잘나와요!! 인스타 감성샷 쌉가능! 디저트도 귀엽고 볼풀장 진짜 깊어서 완전 재밌어요!", date:"7.13 · 월요일" },
+      { rating:"4.5", meta:"저녁 · 1번째 방문", text:"룸도 있어서 신발 벗고 앉을 수 있고, 볼풀 등 아이들이 놀기 좋아요", date:"7.25 · 토요일" }
+    ]
+  }
+};
+
+function openModal(key){
+  const s = storeDetails[key];
+  const MY_RATING = 4.66, MY_REVIEWS = 246;
+  const ratingDiff = (s.rating - MY_RATING).toFixed(2);
+  const reviewDiff = s.reviewCount - MY_REVIEWS;
+  const seatingHtml = s.seating.length
+    ? `<div class="md-row"><span class="md-ic">🪑</span><span>${s.seating.join(' · ')}</span></div>` : '';
+  const reviewsHtml = s.reviews.map(r => `
+    <div class="review-card">
+      <div class="rc-top">
+        <span class="rc-rating ${r.rating ? '' : 'dim'}">${r.rating ? '★ '+r.rating : '평점 없음'}</span>
+        <span class="rc-meta">${r.meta}</span>
+      </div>
+      <p class="rc-text">${r.text}</p>
+      <div class="rc-date">${r.date}</div>
+    </div>
+  `).join('');
+  const wordCloudHtml = s.wordCloud.map(w => `
+    <span class="wc-w" style="top:${w.top}; left:${w.left}; font-size:${w.size}px; color:${w.color}; transform:rotate(${w.rot}deg);">${w.w}</span>
+  `).join('');
+
+  document.getElementById('modalBody').innerHTML = `
+    <div class="md-head">
+      <span class="compA-badge lg">${key}</span>
+      <div>
+        <div class="md-name">${s.name}</div>
+        <div class="compA-rating">★ ${s.rating} <span class="compA-count">· 리뷰 ${s.reviewCount.toLocaleString()}개</span></div>
+      </div>
+    </div>
+
+    <div class="vs-strip">
+      <div class="vs-col">
+        <span class="vs-label">우리 (롱베케이션)</span>
+        <span class="vs-val">★ ${MY_RATING} <small>· ${MY_REVIEWS}개</small></span>
+      </div>
+      <div class="vs-mid">VS</div>
+      <div class="vs-col">
+        <span class="vs-label">${s.name}</span>
+        <span class="vs-val">★ ${s.rating} <small>· ${s.reviewCount}개</small></span>
+      </div>
+    </div>
+    <div class="vs-delta">평점 ${ratingDiff >= 0 ? '+'+ratingDiff : ratingDiff} · 리뷰 ${reviewDiff >= 0 ? '+'+reviewDiff : reviewDiff}건 ${reviewDiff >= 0 ? '더 많음' : '더 적음'} (우리 대비)</div>
+
+    <div class="briefing md-briefing">
+      <div class="ic">AI</div>
+      <p><span class="tag">AI 브리핑</span>${s.briefing}</p>
+    </div>
+
+    <div class="md-section-label">소개</div>
+    <p class="md-intro">${s.intro}</p>
+
+    <div class="md-section-label">대표 메뉴</div>
+    <div class="form-card" style="padding:6px 16px;">
+      ${s.menu.map(m => `<div class="ledger-item"><div class="li-left"><span class="li-cat">${m[0]}</span></div><span class="li-amt" style="color:var(--ink)">${m[1]}</span></div>`).join('')}
+    </div>
+
+    <div class="md-section-label">주요 리뷰 키워드</div>
+    <div class="compA-tags" style="margin-bottom:18px;">
+      ${s.tags.map(t => `<span class="tag-pill">${t}</span>`).join('')}
+    </div>
+
+    <div class="md-section-label">자주 등장하는 단어</div>
+    <div class="wordcloud-card" style="padding:14px 12px;">
+      <div class="wc-cloud" style="height:120px;">
+        ${wordCloudHtml}
+      </div>
+    </div>
+
+    <div class="gap-summary-card">
+      <div class="gap-block">
+        <div class="gap-label strength">💪 이 매장의 강점</div>
+        <p class="gap-text">${s.strength}</p>
+      </div>
+      <div class="gap-block">
+        <div class="gap-label diff">🔀 우리 매장과의 차이점</div>
+        <p class="gap-text">${s.diff}</p>
+      </div>
+    </div>
+
+    <div class="md-section-label">대표 리뷰</div>
+    <div class="review-list" style="margin-bottom:6px;">
+      ${reviewsHtml}
+    </div>
+    <div class="history-link" onclick="openAllReviews('${key}')">
+      전체 리뷰 보기 (${s.reviewCount.toLocaleString()}건) <span class="hl-arrow">→</span>
+    </div>
+
+    <div class="md-section-label">매장 정보</div>
+    <div class="form-card" style="padding:12px 16px;">
+      <div class="md-row"><span class="md-ic">📶</span><span>${s.amenities.join(' · ')}</span></div>
+      <div class="md-row"><span class="md-ic">🅿️</span><span>주차 ${s.parking}</span></div>
+      ${seatingHtml}
+      <div class="md-row"><span class="md-ic">🔗</span><span>${s.sns}</span></div>
+    </div>
+  `;
+  document.getElementById('storeModal').classList.add('open');
+}
+function closeModal(){
+  document.getElementById('storeModal').classList.remove('open');
+}
+
+const expenseData = {
+  rent:     { category:"임대료", vendor:"", amount:"1200000", payment:"계좌이체", memo:"매달 15일 자동 등록" },
+  internet: { category:"기타", vendor:"통신사", amount:"89000", payment:"카드", memo:"매달 5일 자동 등록" },
+  beans:    { category:"재료 구입", vendor:"연남원두상회", amount:"340000", payment:"카드", memo:"원두 20kg 발주" },
+  rent2:    { category:"임대료", vendor:"", amount:"1200000", payment:"계좌이체", memo:"" },
+  utility:  { category:"공과금", vendor:"", amount:"210000", payment:"계좌이체", memo:"" }
+};
+let currentEditKey = null;
+
+function openExpenseEdit(key){
+  currentEditKey = key;
+  const d = expenseData[key];
+  document.getElementById('editCategory').value = d.category;
+  document.getElementById('editVendor').value = d.vendor;
+  document.getElementById('editAmount').value = d.amount;
+  document.getElementById('editMemo').value = d.memo;
+  document.querySelectorAll('#editPaymentChips .chip').forEach(c=>{
+    c.classList.toggle('sel', c.dataset.val === d.payment);
+  });
+  document.getElementById('expenseModal').classList.add('open');
+}
+function closeExpenseEdit(){
+  document.getElementById('expenseModal').classList.remove('open');
+}
+function saveExpenseEdit(){
+  alert('수정된 내용이 저장됐어요.');
+  closeExpenseEdit();
+}
+function deleteExpenseEdit(){
+  if(confirm('이 지출 기록을 삭제할까요? 되돌릴 수 없어요.')){
+    closeExpenseEdit();
+    alert('삭제됐어요.');
+  }
+}
+
+/* ---------- 마케팅 챗봇 ---------- */
+const toneVariants = {
+  emotional: { text: '"교토에서 온 말차 한 스푼, 연남동 골목 안 작은 휴가.<br>롱베케이션에서 잠시 쉬어가세요 🍵"', tag: '#연남동카페 #말차디저트' },
+  casual: { text: '"말차 덕후라면 그냥 오세요 🍵<br>진짜 교토산 말차, 여기서 다 씁니다"', tag: '#연남동말차 #진짜말차' },
+  value: { text: '"프리미엄 교토 우지말차, 생각보다 부담 없는 가격 ☺️<br>한 번 맛보면 이유를 알게 돼요"', tag: '#가성비카페 #연남동디저트' }
+};
+function switchMarketTone(key, el){
+  document.querySelectorAll('.chat-tone-tabs span').forEach(s=>s.classList.remove('sel'));
+  el.classList.add('sel');
+  const v = toneVariants[key];
+  document.getElementById('toneCopyText').innerHTML = v.text;
+  document.getElementById('toneCopyTag').textContent = v.tag;
+}
+
+function appendChatRow(role, html){
+  const log = document.getElementById('chatLog');
+  const row = document.createElement('div');
+  row.className = 'chat-row ' + role;
+  if(role === 'bot'){
+    row.innerHTML = `<span class="chat-avatar">AI</span><div class="chat-bubble bot">${html}</div>`;
+  } else {
+    row.innerHTML = `<div class="chat-bubble user">${html}</div>`;
+  }
+  log.appendChild(row);
+  log.scrollTop = log.scrollHeight;
+}
+
+const quickReplies = {
+  '경쟁사 대비 강점 알려줘': `<div class="chat-source">근거 · 반경 1km 경쟁사 3곳 대비 Gap Analysis</div>우리 매장은 '천천히·조용한' 분위기 키워드가 압도적이에요. 경쟁사들은 대부분 '넓고 활기찬' 쪽이라, 조용히 머물고 싶은 손님층에서는 우리가 확실한 1순위예요.`,
+  '리뷰 답글 초안 써줘': `최근 리뷰 중 "말차라떼가 밍밍했다"는 의견에 답글 초안을 만들어봤어요.<br><br><div class="copy-card chat-copy-card"><p>"소중한 후기 감사해요! 말차 농도는 저희도 계속 신경 쓰는 부분인데, 더 진하게 느껴지실 수 있도록 다음 방문 때 꼭 반영해볼게요 🍵"</p><div class="cc-foot"><span class="cc-src">리뷰 답글용</span><button class="copy-btn">복사하기</button></div></div>`,
+  '이번 주 이벤트 아이디어': `<div class="chat-source">근거 · 상권 데이터 기준 토요일 매출 비중 21.1%로 최고</div>토요일 매출이 유독 강한 걸 활용해서, <b>"토요일 한정 말차 세트 프로모션"</b>은 어떠세요? 주말 원거리 고객 유입에도 도움이 될 것 같아요.`
+};
+function sendQuickMsg(msg){
+  appendChatRow('user', msg);
+  setTimeout(() => appendChatRow('bot', quickReplies[msg] || '조금만 기다려주세요, 데이터를 확인하고 있어요.'), 500);
+}
+function sendChatMsg(){
+  const input = document.getElementById('chatInput');
+  const msg = input.value.trim();
+  if(!msg) return;
+  appendChatRow('user', msg);
+  input.value = '';
+  setTimeout(() => appendChatRow('bot', '아직 목업 단계라 이 질문엔 미리 준비된 답이 없어요. 실제 서비스에서는 매장 데이터를 바탕으로 LLM이 바로 답해드려요.'), 500);
+}
+document.getElementById('chatInput')?.addEventListener('keydown', (e) => {
+  if(e.key === 'Enter') sendChatMsg();
+});
+document.querySelectorAll('#editPaymentChips .chip').forEach(chip=>{
+  chip.addEventListener('click', ()=>{
+    document.querySelectorAll('#editPaymentChips .chip').forEach(c=>c.classList.remove('sel'));
+    chip.classList.add('sel');
+  });
+});
+
+function openHistory(){
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('history').classList.add('active');
+}
+function closeHistory(){
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('home').classList.add('active');
+}
+
+let originalMyReviewsHtml = null;
+let currentReviewStoreKey = 'S001';
+
+const myStoreMoreReviews = [
+  { rating:"5.0", meta:"저녁 · 바로 입장 · 1번째 방문", text:"연남동 롱베케이션에서 말차푸딩 먹었는데 우지말차라 진해요. 생크림 베이스의 녹진한 식감과 말차 특유의 씁쓸함·달콤함이 조화로워서 감탄하며 먹었습니다.", date:"6.11 · 목요일" },
+  { rating:"5.0", meta:"저녁 · 바로 입장 · 1번째 방문", text:"연남동 롱베케이션 계절과일 롤케이크 진짜 별미네요. 지금 시즌엔 망고가 들어가는데 크림도 부드럽고 한정수량이라 더 특별했어요.", date:"6.13 · 토요일" },
+  { rating:null, meta:"점심 · 1번째 방문", text:"완전 취향 저격 카페 발견! 말차 롤케이크가 이렇게 맛있어도 되나요? 겉은 바삭한데 속은 촉촉하고 말차 맛이 강하지 않아서 좋았어요.", date:"3.1 · 일요일" },
+  { rating:"5.0", meta:"점심 · 바로 입장 · 1번째 방문", text:"주말 오후에 잠깐 들러 달콤한 향과 아늑한 좌석에서 여유로운 시간을 보냈어요. 주변 소리도 잔잔해 집중이 잘 되었어요.", date:"5.6 · 수요일" },
+  { rating:null, meta:"저녁 · 1번째 방문", text:"이곳의 디저트는 정말 예술입니다. 말차의 깊은 맛을 제대로 느낄 수 있었어요.", date:"3.19 · 목요일" }
+];
+
+function reviewCardHtml(r){
+  return `
+    <div class="review-card">
+      <div class="rc-top">
+        <span class="rc-rating ${r.rating ? '' : 'dim'}">${r.rating ? '★ '+r.rating : '평점 없음'}</span>
+        <span class="rc-meta">${r.meta}</span>
+      </div>
+      <p class="rc-text">${r.text}</p>
+      <div class="rc-date">${r.date}</div>
+    </div>
+  `;
+}
+
+function openAllReviews(key){
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('allReviews').classList.add('active');
+
+  const titleEl = document.querySelector('#allReviews .history-title');
+  const listEl = document.getElementById('allReviewsList');
+  const moreEl = document.getElementById('moreReviewsDynamic');
+  const loadMoreBtn = document.getElementById('loadMoreBtn');
+  const statusEl = document.getElementById('refreshStatus');
+
+  moreEl.style.display = 'none';
+  loadMoreBtn.style.display = 'block';
+  loadMoreBtn.textContent = '리뷰 5개 더 보기';
+
+  if(key && storeDetails[key]){
+    const s = storeDetails[key];
+    currentReviewStoreKey = key;
+    titleEl.textContent = s.name + ' 리뷰';
+    listEl.innerHTML = s.reviews.map(reviewCardHtml).join('');
+    moreEl.innerHTML = s.moreReviews.map(reviewCardHtml).join('');
+    statusEl.innerHTML = `총 <b>${s.reviewCount.toLocaleString()}건</b> 중 일부를 보여드려요 · 갱신하면 최신 리뷰를 더 가져와요`;
+  } else {
+    currentReviewStoreKey = 'S001';
+    titleEl.textContent = '전체 리뷰 · 롱베케이션 (우리)';
+    listEl.innerHTML = originalMyReviewsHtml;
+    moreEl.innerHTML = myStoreMoreReviews.map(reviewCardHtml).join('');
+    statusEl.innerHTML = '마지막 갱신 · 8월 18일 03:00 (자동 배치) · 총 <b>246건</b>';
+  }
+}
+function loadMoreReviews(){
+  document.getElementById('moreReviewsDynamic').style.display = 'flex';
+  document.getElementById('loadMoreBtn').style.display = 'none';
+}
+function closeAllReviews(){
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('compare').classList.add('active');
+}
+
+let lastRefreshTime = null;
+function refreshReviews(){
+  const btn = document.getElementById('refreshBtn');
+  const status = document.getElementById('refreshStatus');
+
+  // 쿨다운: 1시간 이내 재요청 방지 (실제 구현 시 서버에서도 동일하게 체크)
+  const now = Date.now();
+  if(lastRefreshTime && now - lastRefreshTime < 5000){ // 목업이라 5초로 축소
+    alert('방금 갱신했어요. 잠시 후 다시 시도해주세요.');
+    return;
+  }
+
+  btn.classList.add('spinning');
+  btn.disabled = true;
+  status.textContent = '갱신 중... 새 리뷰를 확인하고 있어요';
+
+  // 실제로는 REFRESH_JOBS 생성 → 비동기 크롤링+분석 → polling
+  setTimeout(() => {
+    lastRefreshTime = Date.now();
+    btn.classList.remove('spinning');
+    btn.disabled = false;
+    status.innerHTML = '방금 갱신 완료 · 새 리뷰 <b>3건</b> 추가됨 · 총 <b>249건</b>';
+
+    const newCard = document.createElement('div');
+    newCard.className = 'review-card new-flash';
+    newCard.innerHTML = `
+      <div class="rc-top"><span class="rc-rating">★ 5.0</span><span class="rc-meta">저녁 · 바로 입장 · 1번째 방문</span></div>
+      <p class="rc-text">방금 올라온 신규 리뷰예요. 분위기가 좋아서 또 오고 싶어요!</p>
+      <div class="rc-tags"><span class="pay-tag">신규</span></div>
+      <div class="rc-date">8.20 · 목요일</div>
+    `;
+    document.getElementById('allReviewsList').prepend(newCard);
+  }, 1600);
+}
+function switchHist(view, el){
+  document.querySelectorAll('#histTabs span').forEach(s=>s.classList.remove('sel'));
+  el.classList.add('sel');
+  document.getElementById('histDaily').style.display = view==='daily' ? 'block':'none';
+  document.getElementById('histMonthly').style.display = view==='monthly' ? 'block':'none';
+}
+
+let isRegistered = false;
+
+function openBizAuth(){
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('bizAuth').classList.add('active');
+  if(isRegistered){
+    // 이미 등록된 매장이면 인증 정보만 다시 보여줌 (재인증 아님)
+    document.getElementById('bizForm').style.display = 'none';
+    document.getElementById('storeInfoForm').style.display = 'none';
+    document.getElementById('verifyResult').style.display = 'block';
+  } else {
+    document.getElementById('bizForm').style.display = 'block';
+    document.getElementById('storeInfoForm').style.display = 'none';
+    document.getElementById('verifyResult').style.display = 'none';
+  }
+}
+function closeBizAuth(){
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('home').classList.add('active');
+}
+function verifyBiz(){
+  document.getElementById('bizForm').style.display = 'none';
+  document.getElementById('verifyResult').style.display = 'block';
+  document.getElementById('storeInfoForm').style.display = 'block';
+}
+function completeRegistration(){
+  const name = document.getElementById('storeNameInput').value || '내 매장';
+  document.getElementById('storePillName').textContent = name;
+  isRegistered = true;
+  document.querySelector('.bottom-tabs').style.display = 'flex';
+  closeBizAuth();
+}
+
+function switchLedger(view, el){
+  document.querySelectorAll('#ledgerTabs span').forEach(s=>s.classList.remove('sel'));
+  el.classList.add('sel');
+  document.getElementById('ledgerStatus').style.display = view==='status' ? 'block':'none';
+  document.getElementById('ledgerRegister').style.display = view==='register' ? 'block':'none';
+  document.getElementById('ledgerHistory').style.display = view==='history' ? 'block':'none';
+}
+
+function openCsvMapping(){
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('csvMapping').classList.add('active');
+  document.getElementById('uploadZone').style.display = 'block';
+  document.getElementById('mappingResult').style.display = 'none';
+  document.getElementById('csvFileInput').value = '';
+}
+function onFileSelected(input){
+  if(!input.files || !input.files[0]) return;
+  const file = input.files[0];
+  document.getElementById('fiName').textContent = file.name; // 실제 선택한 파일명 반영
+  document.getElementById('uploadZone').style.display = 'none';
+  document.getElementById('mappingResult').style.display = 'block';
+}
+function closeCsvMapping(){
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('ledger').classList.add('active');
+}
+function confirmCsvMapping(){
+  alert('매핑이 저장됐어요. 다음 업로드부터는 자동으로 적용돼요.');
+  closeCsvMapping();
+}
+
+function showSignup(){
+  document.getElementById('loginStep').style.display = 'none';
+  document.getElementById('signupStep').style.display = 'block';
+}
+function showLogin(){
+  document.getElementById('signupStep').style.display = 'none';
+  document.getElementById('loginStep').style.display = 'block';
+}
+function completeLogin(){
+  document.getElementById('loginScreen').classList.add('hidden');
+  openBizAuth();
+}
+
+// 최초 실행 시: 로그인부터 시작
+document.addEventListener('DOMContentLoaded', () => {
+  originalMyReviewsHtml = document.getElementById('allReviewsList').innerHTML;
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('bizAuth').classList.add('active');
+  document.querySelector('.bottom-tabs').style.display = 'none';
+});
+document.querySelectorAll('.chip-row').forEach(row=>{
+  row.querySelectorAll('.chip').forEach(chip=>{
+    chip.addEventListener('click', ()=>{
+      row.querySelectorAll('.chip').forEach(c=>c.classList.remove('sel'));
+      chip.classList.add('sel');
+    });
+  });
+});
+document.querySelectorAll('.tone-tabs').forEach(row=>{
+  row.querySelectorAll('span').forEach(t=>{
+    t.addEventListener('click', ()=>{
+      row.querySelectorAll('span').forEach(s=>s.classList.remove('sel'));
+      t.classList.add('sel');
+    });
+  });
+});
+
+const metricInfo = {
+  stores: { title: '점포수 (개)', tag: '꾸준한 감소세', tagClass: 'down' },
+  txns:   { title: '월평균 매출건수 (건)', tag: '최근 반등', tagClass: 'up' },
+  sales:  { title: '점포당 월평균 매출액 (만원)', tag: '전분기 대비 +148만원', tagClass: 'up' },
+  foot:   { title: '유동인구 밀도 (명/ha)', tag: '전분기 대비 +1,592명', tagClass: 'up' },
+};
+document.querySelectorAll('.metric-chips .chip').forEach(chip=>{
+  chip.addEventListener('click', ()=>{
+    const metric = chip.dataset.metric;
+    document.querySelectorAll('.metric-chips .chip').forEach(c=>c.classList.remove('sel'));
+    chip.classList.add('sel');
+    document.querySelectorAll('.metric-set').forEach(set=>{
+      set.style.display = (set.dataset.metric === metric) ? 'block' : 'none';
+    });
+    const info = metricInfo[metric];
+    const head = document.getElementById('trendHead');
+    head.innerHTML = `<span>${info.title}</span><span class="trend-tag ${info.tagClass}">${info.tag}</span>`;
+  });
+});
+</script>
+
+</body>
+</html>

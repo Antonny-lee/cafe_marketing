@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('마케팅 챗봇')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: nav}"></nav>
+<main>
+    <h1>마케팅 챗봇 <span class="muted" style="font-size:13px; font-weight:400;">우리 매장 데이터 기반 AI 상담</span></h1>
+
+    <style>
+        .chat-card { display: flex; flex-direction: column; height: 62vh; padding: 0; overflow: hidden; }
+        .chat-log { flex: 1; overflow-y: auto; padding: 20px 22px; display: flex; flex-direction: column; gap: 14px; }
+        .chat-empty { color: var(--muted); font-size: 13px; text-align: center; margin-top: 40px; line-height: 1.7; }
+        .chat-row { display: flex; }
+        .chat-row.user { justify-content: flex-end; }
+        .chat-bubble {
+            max-width: 72%; padding: 12px 15px; border-radius: 12px; font-size: 13.5px; line-height: 1.65;
+            white-space: pre-wrap; word-break: break-word;
+        }
+        .chat-row.user .chat-bubble { background: var(--accent-dark); color: #fff; border-bottom-right-radius: 3px; }
+        .chat-row.bot .chat-bubble { background: var(--card); border: 1px solid var(--border); border-bottom-left-radius: 3px; }
+        .chat-row.bot .chat-bubble.pending { color: var(--muted); font-style: italic; }
+        .chat-bubble p { margin: 0 0 10px; }
+        .chat-bubble p:last-child { margin-bottom: 0; }
+        .chat-bubble strong { color: var(--accent-dark); font-weight: 700; }
+        .chat-bubble ol, .chat-bubble ul { margin: 0 0 10px; padding-left: 20px; }
+        .chat-bubble ol:last-child, .chat-bubble ul:last-child { margin-bottom: 0; }
+        .chat-bubble li { margin-bottom: 5px; }
+        .chat-bubble li:last-child { margin-bottom: 0; }
+        .chat-form { display: flex; gap: 10px; padding: 14px 18px; border-top: 1px solid var(--border); background: var(--card); }
+        .chat-form textarea {
+            flex: 1; resize: none; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
+            font-family: inherit; font-size: 13.5px; line-height: 1.5; min-height: 42px; max-height: 120px;
+        }
+        .chat-form button {
+            padding: 0 20px; border: none; border-radius: 8px; background: var(--accent);
+            color: #fff; font-weight: 600; font-size: 13.5px; cursor: pointer;
+        }
+        .chat-form button:disabled { opacity: 0.5; cursor: default; }
+        .chat-hint { font-size: 11.5px; color: var(--muted); margin-top: 8px; }
+    </style>
+
+    <div class="card chat-card">
+        <div class="chat-log" id="chatLog">
+            <p class="chat-empty" id="chatEmpty">
+                우리 매장의 리뷰·평점·상권분석 데이터를 바탕으로 마케팅 아이디어를 물어보세요.<br/>
+                예) "우리 매장 리뷰에서 자주 나오는 불만을 활용한 이벤트 아이디어 줘"
+            </p>
+        </div>
+        <form class="chat-form" id="chatForm">
+            <textarea id="chatInput" placeholder="마케팅 관련 질문을 입력하세요 (Enter 전송 · Shift+Enter 줄바꿈)" required></textarea>
+            <button type="submit" id="chatSend">전송</button>
+        </form>
+    </div>
+    <p class="chat-hint">AI가 사장님 매장에 등록된 실제 리뷰/평점/상권분석 데이터를 근거로 답변합니다. 데이터에 없는 부분은 추측임을 밝혀서 답합니다.</p>
+
+    <script th:inline="javascript">
+        const log = document.getElementById('chatLog');
+        const empty = document.getElementById('chatEmpty');
+        const form = document.getElementById('chatForm');
+        const input = document.getElementById('chatInput');
+        const sendBtn = document.getElementById('chatSend');
+        const askUrl = /*[[@{/marketing-chat/ask}]]*/ '/marketing-chat/ask';
+        const STORAGE_KEY = 'marketingChatHistory';
+        let history = [];
+
+        try {
+            const saved = sessionStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                history = JSON.parse(saved);
+                history.forEach((turn) => addBubble(turn.role === 'user' ? 'user' : 'bot', turn.content, false));
+            }
+        } catch (e) { /* 저장된 대화 복원 실패 시 그냥 새로 시작 */ }
+
+        function saveHistory() {
+            try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(history)); } catch (e) { /* 저장 공간 부족 등은 무시 */ }
+        }
+
+        function escapeHtml(s) {
+            return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function renderMarkdownLite(text) {
+            const lines = escapeHtml(text).split('\n');
+            let html = '';
+            let listType = null;
+            let paraBuf = [];
+
+            const inline = (s) => s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            const flushPara = () => {
+                if (paraBuf.length) { html += '<p>' + paraBuf.join('<br>') + '</p>'; paraBuf = []; }
+            };
+            const closeList = () => {
+                if (listType) { html += '</' + listType + '>'; listType = null; }
+            };
+
+            for (const raw of lines) {
+                const line = raw.trim();
+                const numMatch = line.match(/^(\d+)[.)]\s+(.*)$/);
+                const bulletMatch = line.match(/^[-*]\s+(.*)$/);
+
+                if (numMatch) {
+                    flushPara();
+                    if (listType !== 'ol') { closeList(); html += '<ol>'; listType = 'ol'; }
+                    html += '<li>' + inline(numMatch[2]) + '</li>';
+                } else if (bulletMatch) {
+                    flushPara();
+                    if (listType !== 'ul') { closeList(); html += '<ul>'; listType = 'ul'; }
+                    html += '<li>' + inline(bulletMatch[1]) + '</li>';
+                } else if (line === '') {
+                    closeList();
+                    flushPara();
+                } else {
+                    closeList();
+                    paraBuf.push(inline(line));
+                }
+            }
+            closeList();
+            flushPara();
+            return html;
+        }
+
+        function addBubble(role, text, pending) {
+            empty.style.display = 'none';
+            const row = document.createElement('div');
+            row.className = 'chat-row ' + (role === 'user' ? 'user' : 'bot');
+            const bubble = document.createElement('div');
+            bubble.className = 'chat-bubble' + (pending ? ' pending' : '');
+            if (role === 'bot' && !pending) {
+                bubble.innerHTML = renderMarkdownLite(text);
+            } else {
+                bubble.textContent = text;
+            }
+            row.appendChild(bubble);
+            log.appendChild(row);
+            log.scrollTop = log.scrollHeight;
+            return bubble;
+        }
+
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                form.requestSubmit();
+            }
+        });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const message = input.value.trim();
+            if (!message) return;
+
+            addBubble('user', message, false);
+            input.value = '';
+            input.disabled = true;
+            sendBtn.disabled = true;
+            const pendingBubble = addBubble('bot', '생각하는 중...', true);
+
+            try {
+                const res = await fetch(askUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: message, history: history })
+                });
+                if (!res.ok) throw new Error('status ' + res.status);
+                const data = await res.json();
+                pendingBubble.classList.remove('pending');
+                pendingBubble.innerHTML = renderMarkdownLite(data.reply);
+                history.push({ role: 'user', content: message });
+                history.push({ role: 'assistant', content: data.reply });
+                saveHistory();
+            } catch (err) {
+                pendingBubble.classList.remove('pending');
+                pendingBubble.textContent = '답변을 가져오지 못했습니다. 잠시 후 다시 시도해주세요.';
+            } finally {
+                input.disabled = false;
+                sendBtn.disabled = false;
+                input.focus();
+            }
+        });
+    </script>
+</main>
+</body>
+</html>

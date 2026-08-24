@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('매장 목록')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: nav}"></nav>
+<main>
+    <h1>매장 목록</h1>
+
+    <form class="search-box" method="get" th:action="@{/stores}">
+        <input type="text" name="keyword" placeholder="매장명 또는 주소 검색" th:value="${keyword}"/>
+        <button type="submit">검색</button>
+    </form>
+
+    <div class="card">
+        <table>
+            <thead><tr><th>매장명</th><th>주소</th><th>지하철</th><th>평균 평점</th><th>리뷰 수</th></tr></thead>
+            <tbody>
+            <tr th:each="row : ${stores}">
+                <td><a class="row-link" th:href="@{'/stores/' + ${row.store().storeId}}" th:text="${row.store().name}">매장명</a></td>
+                <td class="muted" th:text="${row.store().address}">주소</td>
+                <td class="muted" th:text="${row.store().subwayInfo}">지하철</td>
+                <td class="badge-rating" th:text="${row.avgRating() != null ? #numbers.formatDecimal(row.avgRating(), 1, 2) : '-'}">-</td>
+                <td th:text="${row.reviewCount()}">0</td>
+            </tr>
+            </tbody>
+        </table>
+        <p class="muted" th:if="${#lists.isEmpty(stores)}">검색 결과가 없습니다.</p>
+    </div>
+</main>
+</body>
+</html>

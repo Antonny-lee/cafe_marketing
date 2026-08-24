@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('홈')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: nav}"></nav>
+<main>
+    <style>
+        .store-pill {
+            display:inline-flex; align-items:center; gap:8px; margin-bottom:20px;
+            padding:7px 14px 7px 10px; background:var(--card); border:1px solid var(--border);
+            border-radius:999px; font-size:13px; color:var(--muted); text-decoration:none;
+        }
+        .store-pill .dot { width:7px; height:7px; border-radius:50%; background:var(--accent-dark); }
+        .store-pill b { color:var(--ink); font-weight:700; }
+        .store-pill .arrow { color:var(--muted); }
+
+        .today-date { font-family:'IBM Plex Mono', monospace; font-size:11.5px; color:var(--muted); margin-bottom:6px; }
+        .today-greeting { font-family:'Noto Serif KR', serif; font-weight:700; font-size:19px; line-height:1.4; margin-bottom:18px; }
+        .today-label { font-size:12.5px; color:var(--muted); margin-bottom:6px; }
+        .today-amt { font-family:'IBM Plex Mono', monospace; font-size:28px; font-weight:700; color:var(--ink); }
+        .today-badges { display:flex; gap:8px; flex-wrap:wrap; margin:10px 0; }
+        .today-badge { font-family:'IBM Plex Mono', monospace; font-size:11px; font-weight:600; padding:4px 10px; border-radius:999px; }
+        .today-badge.up { background:#F1ECE4; color:var(--accent-dark); }
+        .today-badge.down { background:#F3E1DA; color:var(--rust); }
+        .today-sub { font-size:12px; color:var(--muted); }
+
+        .receipt-card { position:relative; }
+        .receipt-card::before, .receipt-card::after {
+            content:""; position:absolute; left:0; right:0; height:8px;
+            background: radial-gradient(circle at 8px 4px, transparent 5px, var(--bg) 5.5px) repeat-x;
+            background-size:16px 8px;
+        }
+        .receipt-card::before { top:-4px; }
+        .receipt-card::after { bottom:-4px; transform:rotate(180deg); }
+        .receipt-row { display:flex; justify-content:space-between; padding:7px 0; font-size:13.5px; border-bottom:1px dashed var(--border); }
+        .receipt-row:last-of-type { border-bottom:none; }
+        .receipt-row .amt { font-family:'IBM Plex Mono', monospace; font-weight:600; }
+        .receipt-row .amt.neg { color:var(--rust); }
+        .receipt-total { display:flex; justify-content:space-between; align-items:baseline; margin-top:10px; padding-top:12px; border-top:1px dashed var(--border); }
+        .receipt-total .amt { font-family:'IBM Plex Mono', monospace; font-size:22px; font-weight:700; color:var(--accent-dark); }
+        .stamp {
+            position:absolute; right:20px; top:20px; width:50px; height:50px; border-radius:50%;
+            border:1.5px solid var(--rust); color:var(--rust);
+            display:flex; align-items:center; justify-content:center;
+            font-family:'Noto Serif KR', serif; font-weight:900; font-size:10.5px;
+            transform:rotate(-12deg); opacity:0.85; text-align:center; line-height:1.25;
+        }
+
+        .pace-amt { font-family:'IBM Plex Mono', monospace; font-size:20px; font-weight:700; color:var(--ink); margin:8px 0 16px; }
+        .home-history-link {
+            display:block; text-align:center; font-size:13px; font-weight:600; color:var(--muted);
+            padding:12px; border:1px dashed var(--border); border-radius:8px; margin-bottom:22px; text-decoration:none;
+        }
+    </style>
+
+    <a href="/my-store" class="store-pill">
+        <span class="dot"></span> 우리 매장 <b th:text="${store.name}">매장명</b> <span class="arrow">›</span>
+    </a>
+
+    <div class="today-date" th:text="${todayLabel}">2026년 8월 24일 (월)</div>
+    <div class="today-greeting">사장님, 오늘도 고생 많으십니다.</div>
+
+    <div class="card" style="margin-bottom:18px;">
+        <div class="today-label">오늘의 매출</div>
+        <div class="today-amt" th:text="${#numbers.formatInteger(home.todaySales(),1,'COMMA')} + '원'">0원</div>
+        <div class="today-badges">
+            <span class="today-badge" th:if="${home.vsYesterdayPercent() != null}"
+                  th:classappend="${home.vsYesterdayPercent() >= 0} ? 'up' : 'down'"
+                  th:text="(${home.vsYesterdayPercent() >= 0} ? '▲ 어제보다 ' : '▼ 어제보다 ') + ${home.vsYesterdayAbsPercent()} + '%'"></span>
+            <span class="today-badge" th:if="${home.vsLastWeekPercent() != null}"
+                  th:classappend="${home.vsLastWeekPercent() >= 0} ? 'up' : 'down'"
+                  th:text="(${home.vsLastWeekPercent() >= 0} ? '▲ 지난주보다 ' : '▼ 지난주보다 ') + ${home.vsLastWeekAbsPercent()} + '%'"></span>
+        </div>
+        <div class="today-sub">
+            결제 <span th:text="${home.expenseCountThisMonth()}">0</span>건
+            <span th:if="${home.lastUploadInfo() != null}" th:text="'· ' + ${home.lastUploadInfo()} + ' 리포트 반영'"></span>
+        </div>
+    </div>
+
+    <div class="card receipt-card" style="margin-bottom:18px;">
+        <span class="stamp">이번달<br/>결산</span>
+        <h2>이번 달 손익 명세</h2>
+        <div class="receipt-row"><span class="muted">매출</span><span class="amt" th:text="'+ ' + ${#numbers.formatInteger(home.monthSales(),1,'COMMA')}"></span></div>
+        <div class="receipt-row"><span class="muted">재료비</span><span class="amt neg" th:text="'− ' + ${#numbers.formatInteger(home.materialCost(),1,'COMMA')}"></span></div>
+        <div class="receipt-row"><span class="muted">임대료</span><span class="amt neg" th:text="'− ' + ${#numbers.formatInteger(home.rentCost(),1,'COMMA')}"></span></div>
+        <div class="receipt-row"><span class="muted">기타 지출</span><span class="amt neg" th:text="'− ' + ${#numbers.formatInteger(home.otherCost(),1,'COMMA')}"></span></div>
+        <div class="receipt-total">
+            <span style="font-weight:600; font-size:13px;">순이익</span>
+            <span class="amt" th:text="${#numbers.formatInteger(home.netProfit(),1,'COMMA')} + '원'"></span>
+        </div>
+    </div>
+
+    <div class="card" style="margin-bottom:18px;">
+        <h2>이번 달 페이스</h2>
+        <p class="muted" style="font-size:12.5px; margin-bottom:4px;">이대로면 이번 달 예상 매출</p>
+        <div class="pace-amt" th:text="'약 ' + ${#numbers.formatInteger(home.projectedMonthSales(),1,'COMMA')} + '원'">0원</div>
+        <div class="bar-row">
+            <div class="bar-row-top"><span class="nm">이번 달 (오늘 기준)</span><span th:text="${#numbers.formatInteger(home.thisMonthToDate(),1,'COMMA')}"></span></div>
+            <div class="bar-track"><div class="bar-fill us" style="width:100%"></div></div>
+        </div>
+        <div class="bar-row">
+            <div class="bar-row-top"><span class="nm">저번달 같은 날짜</span><span th:text="${#numbers.formatInteger(home.lastMonthSameDayToDate(),1,'COMMA')}"></span></div>
+            <div class="bar-track"><div class="bar-fill comp" th:style="'width:' + ${home.paceBarPercent()} + '%'"></div></div>
+        </div>
+        <p class="muted" style="font-size:12px; margin-top:8px;" th:if="${home.paceChangePercent() != null}"
+           th:text="'저번달보다 ' + ${home.paceChangePercent()} + '% ' + (${home.paceChangePercent() >= 0} ? '빠른' : '느린') + ' 페이스예요.'"></p>
+    </div>
+
+    <div class="card" style="margin-bottom:18px;">
+        <h2>작년 같은 달과 비교</h2>
+        <div class="bar-row">
+            <div class="bar-row-top"><span class="nm">이번 달</span><span th:text="${#numbers.formatInteger(home.thisMonthToDate(),1,'COMMA')}"></span></div>
+            <div class="bar-track"><div class="bar-fill us" style="width:100%"></div></div>
+        </div>
+        <div class="bar-row">
+            <div class="bar-row-top"><span class="nm">작년 같은 달</span><span th:text="${#numbers.formatInteger(home.lastYearSameMonthToDate(),1,'COMMA')}"></span></div>
+            <div class="bar-track"><div class="bar-fill comp" th:style="'width:' + ${home.yoyBarPercent()} + '%'"></div></div>
+        </div>
+        <p class="muted" style="font-size:12px; margin-top:8px;" th:if="${home.yoyChangePercent() != null}"
+           th:text="'작년 대비 ' + (${home.yoyChangePercent() >= 0} ? '+' : '') + ${home.yoyChangePercent()} + '% ' + (${home.yoyChangePercent() >= 0} ? '성장했어요' : '감소했어요') + '. 데이터가 더 쌓일수록 계절 패턴 비교가 정교해져요.'"></p>
+    </div>
+
+    <a href="/ledger?view=status" class="home-history-link">전체 매출 내역 보기 →</a>
+</main>
+</body>
+</html>

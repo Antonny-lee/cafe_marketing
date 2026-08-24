@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('경쟁사 비교')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: nav}"></nav>
+<main>
+    <h1>경쟁사 비교</h1>
+    <p class="muted" style="margin-bottom:20px;">
+        내 매장은 사업자 인증 시 연결한 매장으로 고정됩니다. 비교할 경쟁 매장만 골라보세요.
+    </p>
+
+    <div class="card compare-form" style="margin-bottom:24px;">
+        <form method="get" th:action="@{/compare}">
+            <div class="field">
+                <label>내 매장</label>
+                <div class="card" style="padding:10px 14px; background:var(--bg); font-weight:700;"
+                     th:text="${result.mine().store().name}"></div>
+            </div>
+            <div class="field">
+                <label>비교할 경쟁 매장 (최대 3곳, Ctrl/Cmd 클릭으로 다중 선택)</label>
+                <select name="rivals" multiple>
+                    <option th:each="s : ${stores}" th:value="${s.storeId}" th:text="${s.name}"
+                            th:selected="${selectedRivals.contains(s.storeId)}"></option>
+                </select>
+            </div>
+            <button type="submit" style="padding:10px 20px; border:none; border-radius:6px; background:var(--accent-dark); color:#fff; font-weight:700; cursor:pointer;">
+                비교하기
+            </button>
+        </form>
+    </div>
+
+    <div th:if="${result != null}">
+        <div class="card" style="margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap;">
+            <div>
+                <h2 style="margin-bottom:4px;">AI 리뷰 분석</h2>
+                <p class="muted" style="font-size:12.5px; margin:0;" th:if="${insight == null}">
+                    아직 분석 전이에요. 아래 버튼을 누르면 긍정/부정 비율·개선 힌트·워드클라우드 해석까지 한 번에 나와요.
+                </p>
+                <p class="muted" style="font-size:12.5px; margin:0;" th:if="${insight != null}">
+                    마지막 분석 · <span th:text="${#temporals.format(insight.analyzedAt, 'MM.dd HH:mm')}"></span>
+                    (리뷰 <span th:text="${insight.analyzedCount}"></span>건 기준)
+                </p>
+                <p th:if="${analyzeError != null}" style="color:#A8462E; font-size:12.5px; margin:4px 0 0;" th:text="'분석 실패: ' + ${analyzeError}"></p>
+            </div>
+            <form method="post" th:action="@{/compare/analyze}">
+                <input type="hidden" name="mine" th:value="${selectedMine}"/>
+                <input type="hidden" th:each="rid : ${selectedRivals}" name="rivals" th:value="${rid}"/>
+                <button type="submit" style="padding:10px 20px; border:none; border-radius:999px; background:var(--accent-dark); color:#fff; font-weight:700; font-size:13px; cursor:pointer; white-space:nowrap;">
+                    <span th:text="${insight == null} ? 'AI로 분석하기' : 'AI로 다시 분석하기'"></span>
+                </button>
+            </form>
+        </div>
+
+        <div class="card" style="margin-bottom:18px;">
+            <h2>종합 평가 · <span th:text="${result.mine().store().name}"></span></h2>
+            <div class="score-row-flex">
+                <div class="donut-wrap">
+                    <div class="donut" th:if="${insight == null}"></div>
+                    <div class="donut" th:if="${insight != null}" th:style="${insight.donutGradientCss}"></div>
+                    <div class="donut-hole">
+                        <span class="donut-num" th:text="${result.mine().reviewCount()} + '건'">0건</span>
+                        <span class="donut-sub">누적 리뷰</span>
+                    </div>
+                </div>
+                <div class="score-side">
+                    <div class="score-row">
+                        <span class="sr-dot pos"></span>
+                        <span class="sr-label">긍정 언급</span>
+                        <span class="sr-val" th:if="${insight != null}" th:text="${#numbers.formatDecimal(insight.positiveRatio,1,0)} + '%'"></span>
+                        <span class="sr-val pending" th:if="${insight == null}">추출 대기 중</span>
+                    </div>
+                    <div class="score-row">
+                        <span class="sr-dot neg"></span>
+                        <span class="sr-label">부정 언급</span>
+                        <span class="sr-val" th:if="${insight != null}" th:text="${#numbers.formatDecimal(insight.negativeRatio,1,0)} + '%'"></span>
+                        <span class="sr-val pending" th:if="${insight == null}">추출 대기 중</span>
+                    </div>
+                    <div class="score-row" style="margin-top:6px;">
+                        <span class="sr-label mono">평균 평점</span>
+                        <span class="score-num" style="font-size:20px;" th:text="${result.mine().avgRating() != null ? #numbers.formatDecimal(result.mine().avgRating(),1,2) : '-'}"></span>
+                    </div>
+                    <div class="score-note" th:if="${insight == null}">리뷰 원문 분석을 실행하면<br>긍정·부정 비율이 채워져요</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-bottom:18px;" th:if="${result.mine().briefing() != null}">
+            <h2>AI 브리핑</h2>
+            <p th:text="${result.mine().briefing()}" style="line-height:1.6;"></p>
+        </div>
+
+        <div class="card" style="margin-bottom:18px;">
+            <h2>우리 매장 강점 키워드 TOP 4</h2>
+            <div class="kw-grid">
+                <div class="kw-item" th:each="tag : ${result.mine().topTags()}">
+                    <span class="kw-ic" th:text="${T(com.cafe.dashboard.util.TagIcons).iconFor(tag.id.tagText)}"></span>
+                    <div class="kw-text">
+                        <span class="kw-name" th:text="${tag.id.tagText}"></span>
+                        <span class="kw-count" th:text="${tag.mentionCount} + '건'"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-bottom:18px;">
+            <h2>동네 카페 평균 대비</h2>
+            <table>
+                <tr><td class="muted">우리 매장 리뷰 수</td><td th:text="${result.peerStats().myReviewCount()} + '개'"></td></tr>
+                <tr><td class="muted">크롤링 매장 <span th:text="${result.peerStats().totalStores()}"></span>곳 평균</td>
+                    <td th:text="${#numbers.formatDecimal(result.peerStats().avgReviewCount(),1,1)} + '개'"></td></tr>
+            </table>
+            <div class="peer-badge">동네 카페 <span th:text="${result.peerStats().totalStores()}"></span>곳 중
+                상위 <span th:text="${100 - result.peerStats().percentileRank()}"></span>%</div>
+        </div>
+
+        <div style="margin-bottom:18px;" th:replace="~{fragments/layout :: wordcloud(${wordCloud}, ${insight != null ? insight.wordSummary : null})}"></div>
+
+        <div class="card" style="margin-bottom:18px;" th:if="${insight != null}">
+            <div class="insight-card-head">
+                <span class="insight-ic">🔍</span>
+                <div>
+                    <div class="insight-title">드물지만 놓치면 안 되는 의견</div>
+                    <div class="insight-sub" th:if="${!#lists.isEmpty(insightItems)}">
+                        평점은 낮지 않은데, 구체적인 개선 힌트가 담긴 리뷰 <span th:text="${#lists.size(insightItems)}"></span>건
+                    </div>
+                    <div class="insight-sub" th:if="${#lists.isEmpty(insightItems)}">
+                        리뷰 <span th:text="${insight.analyzedCount}"></span>건 중 특별히 놓친 개선 힌트는 발견되지 않았어요
+                    </div>
+                </div>
+            </div>
+            <div th:each="item : ${insightItems}" class="insight-item">
+                <div class="insight-quote" th:text="'&quot;' + ${item.quote} + '&quot;'"></div>
+                <div class="insight-action" th:text="'→ ' + ${item.suggestion}"></div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-bottom:18px;" th:if="${!#lists.isEmpty(result.mapMarkers)}">
+            <h2>경쟁사 위치</h2>
+            <div id="compareMap" style="height:340px; border-radius:8px;"></div>
+            <p class="muted" style="font-size:11px; margin-top:8px;">네이버 지도에서 수집한 실제 좌표를 사용했어요.</p>
+        </div>
+
+        <div th:if="${!#lists.isEmpty(result.rivals())}">
+            <h2 class="section-title">경쟁 매장</h2>
+            <div class="compA-card" style="cursor:pointer;" th:each="r, iter : ${result.rivals()}"
+                 th:attr="data-store-id=${r.store().storeId}" onclick="openModal(this.dataset.storeId)">
+                <div class="compA-head">
+                    <span class="compA-badge" th:classappend="'s' + (${iter.index} + 1)"
+                          th:text="${ {'A','B','C'}[iter.index] }"></span>
+                    <div class="compA-title">
+                        <a class="row-link compA-name" th:href="@{'/stores/' + ${r.store().storeId}}" th:text="${r.store().name}"
+                           onclick="event.stopPropagation()"></a>
+                        <span class="compA-rating">★ <span th:text="${r.avgRating() != null ? #numbers.formatDecimal(r.avgRating(),1,2) : '-'}"></span>
+                            <span class="compA-count">· 리뷰 <span th:text="${r.reviewCount()}"></span>개</span></span>
+                    </div>
+                </div>
+                <div class="compA-tags" th:if="${!#lists.isEmpty(r.topTags())}">
+                    <span class="tag-pill" th:each="tag : ${r.topTags()}" th:text="${tag.id.tagText} + ' ' + ${tag.mentionCount} + '건'"></span>
+                </div>
+                <div class="compA-bar-row" th:if="${r.avgRating() != null}">
+                    <span class="cbr-label">평균 평점</span>
+                    <div class="bar-track"><div class="bar-fill" th:classappend="'s' + (${iter.index} + 1)"
+                                                 th:style="'width:' + ${#numbers.formatDecimal(r.avgRating() / 5.0 * 100, 1, 1, 'POINT')} + '%'"></div></div>
+                    <span class="cbr-pct" th:text="${#numbers.formatDecimal(r.avgRating(),1,2)}"></span>
+                </div>
+            </div>
+        </div>
+
+        <div th:if="${!#lists.isEmpty(result.rivals())}">
+            <h2 class="section-title">AI 경쟁사 분석</h2>
+            <p class="muted" style="font-size:12.5px; margin:-6px 0 14px;" th:if="${#maps.isEmpty(comparisonsByRival)}">
+                단순 태그 개수 비교가 아니라, 실제 데이터를 근거로 각 경쟁 매장의 강점과 우리 매장과의 차이점을 AI가 분석해드려요.
+                위쪽 "AI로 분석하기" 버튼을 누르면 채워집니다.
+            </p>
+            <div class="gap-summary-card" th:each="r, iter : ${result.rivals()}">
+                <div class="gap-summary-head">
+                    <span class="gap-summary-badge" th:classappend="'s' + (${iter.index} + 1)"
+                          th:text="${ {'A','B','C'}[iter.index] }"></span>
+                    <span class="gap-summary-name" th:text="${r.store().name}"></span>
+                </div>
+                <div th:if="${comparisonsByRival.get(r.store().storeId) != null}">
+                    <div class="gap-block">
+                        <div class="gap-label strength">💪 이 매장의 강점</div>
+                        <div class="gap-text" th:text="${comparisonsByRival.get(r.store().storeId).strength}"></div>
+                    </div>
+                    <div class="gap-block">
+                        <div class="gap-label diff">🔀 우리 매장과의 차이점</div>
+                        <div class="gap-text" th:text="${comparisonsByRival.get(r.store().storeId).difference}"></div>
+                    </div>
+                </div>
+                <p class="muted" style="font-size:12px; margin:0;" th:if="${comparisonsByRival.get(r.store().storeId) == null}">아직 분석 전이에요.</p>
+            </div>
+        </div>
+
+        <div class="card" style="margin-bottom:18px;" th:if="${!#lists.isEmpty(result.tagComparison())}">
+            <h2>강점 키워드 비교 <span class="badge ours" style="margin-left:8px;">우리 매장 기준 TOP 4</span></h2>
+            <div th:each="row : ${result.tagComparison()}" style="margin-bottom:20px;">
+                <div style="font-weight:700; font-size:13.5px; margin-bottom:10px;" th:text="${row.tagText}"></div>
+                <div class="bar-row" th:each="bar : ${row.bars}">
+                    <div class="bar-row-top">
+                        <span class="nm">
+                            <span class="nm-dot" th:classappend="'s' + ${bar.seriesIndex}"></span>
+                            <span th:text="${bar.storeName} + (${bar.mine} ? ' (우리)' : '')"></span>
+                        </span>
+                        <span th:text="${bar.count} + '건'"></span>
+                    </div>
+                    <div class="bar-track">
+                        <div class="bar-fill" th:classappend="'s' + ${bar.seriesIndex}"
+                             th:style="'width:' + ${bar.widthPercent} + '%'"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" th:if="${!#lists.isEmpty(result.mine().sampleReviews())}">
+            <h2>실제 리뷰 <span class="rank-of muted" style="font-weight:400; font-size:12px;">(최근 <span th:text="${#lists.size(result.mine().sampleReviews())}"></span>건)</span></h2>
+            <div class="review-list">
+                <div class="review-card" th:each="rv : ${result.mine().sampleReviews()}">
+                    <div class="rc-top">
+                        <span th:if="${rv.rating != null}" class="rc-rating" th:text="'★ ' + ${rv.rating}"></span>
+                        <span th:if="${rv.rating == null}" class="rc-rating dim">평점 없음</span>
+                        <span class="rc-meta" th:text="${rv.metaLine}"></span>
+                    </div>
+                    <p class="rc-text" th:text="${rv.reviewText}"></p>
+                    <div class="rc-date" th:text="${rv.reviewDateText}"></div>
+                </div>
+            </div>
+            <a class="load-more-btn" th:href="@{'/stores/' + ${result.mine().store().storeId} + '/reviews'}">
+                전체 리뷰 보기 (<span th:text="${result.mine().reviewCount()}"></span>건) →
+            </a>
+        </div>
+
+        <div class="modal-overlay" th:each="r, iter : ${result.rivals()}" th:id="'overlay-' + ${r.store().storeId}" onclick="if(event.target===this) this.classList.remove('open')">
+            <div class="modal-sheet">
+                <div class="modal-handle"></div>
+                <button type="button" class="modal-close" th:attr="data-store-id=${r.store().storeId}" onclick="closeModal(this.dataset.storeId)">✕</button>
+                <div class="md-head">
+                    <span class="md-badge" th:classappend="'s' + (${iter.index} + 1)" th:text="${ {'A','B','C'}[iter.index] }"></span>
+                    <div>
+                        <div class="md-name" th:text="${r.store().name}"></div>
+                        <div class="md-sub">★ <span th:text="${r.avgRating() != null ? #numbers.formatDecimal(r.avgRating(),1,2) : '-'}"></span>
+                            · 리뷰 <span th:text="${r.reviewCount()}"></span>개</div>
+                    </div>
+                </div>
+
+                <div class="vs-strip">
+                    <div class="vs-col">
+                        <span class="vs-label">우리 (<span th:text="${result.mine().store().name}"></span>)</span>
+                        <span class="vs-val">★ <span th:text="${result.mine().avgRating() != null ? #numbers.formatDecimal(result.mine().avgRating(),1,2) : '-'}"></span></span>
+                        <span class="vs-label" th:text="'리뷰 ' + ${result.mine().reviewCount()} + '개'"></span>
+                    </div>
+                    <span class="vs-mid">VS</span>
+                    <div class="vs-col">
+                        <span class="vs-label" th:text="${r.store().name}"></span>
+                        <span class="vs-val">★ <span th:text="${r.avgRating() != null ? #numbers.formatDecimal(r.avgRating(),1,2) : '-'}"></span></span>
+                        <span class="vs-label" th:text="'리뷰 ' + ${r.reviewCount()} + '개'"></span>
+                    </div>
+                </div>
+                <div class="vs-delta" th:text="${r.vsDeltaText}"></div>
+
+                <div class="md-briefing" th:if="${r.briefing() != null}">
+                    <strong>AI 브리핑</strong><br th:if="${r.briefing() != null}"/>
+                    <span th:text="${r.briefing()}"></span>
+                </div>
+
+                <div th:if="${comparisonsByRival.get(r.store().storeId) != null}">
+                    <div class="md-section-label">AI 강점 · 차이점</div>
+                    <div class="gap-block">
+                        <div class="gap-label strength">💪 이 매장의 강점</div>
+                        <div class="gap-text" th:text="${comparisonsByRival.get(r.store().storeId).strength}"></div>
+                    </div>
+                    <div class="gap-block">
+                        <div class="gap-label diff">🔀 우리 매장과의 차이점</div>
+                        <div class="gap-text" th:text="${comparisonsByRival.get(r.store().storeId).difference}"></div>
+                    </div>
+                </div>
+
+                <div class="md-section-label" th:if="${r.introText() != null}">소개</div>
+                <p class="md-intro" th:if="${r.introText() != null}" th:text="${r.introText()}"></p>
+
+                <div class="md-section-label" th:if="${!#lists.isEmpty(r.topMenu())}">대표 메뉴</div>
+                <div th:if="${!#lists.isEmpty(r.topMenu())}">
+                    <div class="md-row" th:each="m : ${r.topMenu()}">
+                        <span th:text="${m.menuName}"></span>
+                        <span class="mono" th:text="${m.priceKrw != null ? #numbers.formatInteger(m.priceKrw,1,'COMMA') + '원' : m.priceNote}"></span>
+                    </div>
+                </div>
+
+                <div class="md-section-label" th:if="${!#lists.isEmpty(r.topTags())}">주요 리뷰 키워드</div>
+                <div class="compA-tags" th:if="${!#lists.isEmpty(r.topTags())}">
+                    <span class="tag-pill" th:each="tag : ${r.topTags()}" th:text="${tag.id.tagText} + ' ' + ${tag.mentionCount} + '건'"></span>
+                </div>
+
+                <div style="margin-top:18px;" th:replace="~{fragments/layout :: wordcloud(${r.wordCloud()}, null)}"></div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script>
+    function openModal(storeId) {
+        const overlay = document.getElementById('overlay-' + storeId);
+        if (overlay) overlay.classList.add('open');
+    }
+    function closeModal(storeId) {
+        const overlay = document.getElementById('overlay-' + storeId);
+        if (overlay) overlay.classList.remove('open');
+    }
+</script>
+
+<th:block th:if="${result != null and !#lists.isEmpty(result.mapMarkers)}">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script th:inline="javascript">
+    const markers = /*[[${result.mapMarkers()}]]*/ [];
+    const center = markers.find(m => m.mine) || markers[0];
+    const map = L.map('compareMap', {
+        scrollWheelZoom: true,
+        dragging: true,
+        touchZoom: true,
+        doubleClickZoom: true,
+        boxZoom: true,
+        keyboard: true
+    }).setView([center.lat, center.lng], 16);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+        subdomains: 'abcd',
+        maxZoom: 19
+    }).addTo(map);
+
+    const letters = ['A', 'B', 'C'];
+    let rivalIdx = 0;
+    markers.forEach(m => {
+        const label = m.mine ? '★' : letters[rivalIdx++];
+        const seriesClass = m.mine ? 'mine' : ('s' + rivalIdx);
+        const icon = L.divIcon({
+            className: '',
+            html: '<div class="map-badge ' + seriesClass + '" style="cursor:pointer;">' + label + '</div>',
+            iconSize: m.mine ? [32, 32] : [26, 26],
+            iconAnchor: m.mine ? [16, 16] : [13, 13]
+        });
+        const marker = L.marker([m.lat, m.lng], { icon }).addTo(map);
+        marker.bindTooltip(m.name + (m.mine ? ' (우리)' : ''), { permanent: false });
+        marker.on('click', () => { window.location.href = '/stores/' + m.storeId; });
+    });
+</script>
+</th:block>
+</body>
+</html>

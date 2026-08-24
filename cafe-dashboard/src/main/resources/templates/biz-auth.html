@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('사업자 인증')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: nav}"></nav>
+<main>
+    <h1>매장 등록 · 사업자 인증</h1>
+    <p class="muted" style="margin-bottom:20px;">
+        사업자등록번호로 실제 사업자인지 확인합니다. 국세청 공식 데이터로 확인됩니다.
+    </p>
+
+    <div class="card" th:if="${needStore}" style="background:#FBF0D6; border-color:#E3C077; margin-bottom:20px;">
+        <strong>사업자 인증 및 매장 연결이 필요해요.</strong>
+        <span class="muted">경쟁사 비교, 마케팅 챗봇 등은 인증 후 연결한 내 매장 데이터를 기준으로 동작합니다. 아래에서 인증하고 매장을 연결해주세요.</span>
+    </div>
+
+    <div class="card" th:if="${result != null}"
+         th:style="${result.valid()} ? 'border-color:#7c4f31; margin-bottom:20px;' : 'border-color:#a8462e; margin-bottom:20px;'">
+        <h2 th:text="${result.valid()} ? '인증 완료' : '인증 실패'"></h2>
+        <p th:text="${result.message()}">결과 메시지</p>
+        <table th:if="${result.valid()}" style="margin-top:12px;">
+            <tr><td class="muted">사업자등록번호</td><td th:text="${result.business().bizRegNo}"></td></tr>
+            <tr><td class="muted">상호</td><td th:text="${result.business().bizName}"></td></tr>
+            <tr><td class="muted">대표자</td><td th:text="${result.business().ceoName}"></td></tr>
+            <tr><td class="muted">사업자 상태</td><td th:text="${result.business().bizStatus}"></td></tr>
+            <tr><td class="muted">과세 유형</td><td th:text="${result.business().taxType}"></td></tr>
+        </table>
+    </div>
+
+    <div class="card">
+        <h2>사업자 정보 입력</h2>
+        <form method="post" th:action="@{/biz-auth/verify}">
+            <div class="field" style="margin-bottom:12px;">
+                <label class="muted" style="display:block; font-size:12px; margin-bottom:4px;">사업자등록번호 (10자리, 하이픈 없이 또는 포함)</label>
+                <input type="text" name="bizRegNo" placeholder="000-00-00000" required
+                       style="width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:6px;"/>
+            </div>
+            <div class="field" style="margin-bottom:12px;">
+                <label class="muted" style="display:block; font-size:12px; margin-bottom:4px;">개업일자 (YYYYMMDD)</label>
+                <input type="text" name="openDate" placeholder="20240312" required
+                       style="width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:6px;"/>
+            </div>
+            <div class="field" style="margin-bottom:12px;">
+                <label class="muted" style="display:block; font-size:12px; margin-bottom:4px;">대표자명</label>
+                <input type="text" name="ceoName" placeholder="홍길동" required
+                       style="width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:6px;"/>
+            </div>
+            <div class="field" style="margin-bottom:12px;">
+                <label class="muted" style="display:block; font-size:12px; margin-bottom:4px;">매장명</label>
+                <input type="text" name="bizName" placeholder="예: 롱베케이션"
+                       style="width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:6px;"/>
+            </div>
+            <div class="field" style="margin-bottom:16px;">
+                <label class="muted" style="display:block; font-size:12px; margin-bottom:4px;">연락처</label>
+                <input type="text" name="phone" placeholder="02-000-0000"
+                       style="width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:6px;"/>
+            </div>
+            <button type="submit" style="width:100%; padding:12px; border:none; border-radius:6px; background:var(--accent-dark); color:#fff; font-weight:700; cursor:pointer;">
+                국세청으로 인증하기
+            </button>
+        </form>
+    </div>
+
+    <div class="card section-title" th:if="${!#lists.isEmpty(businesses)}">
+        <h2>등록된 사업자</h2>
+        <table style="margin-bottom:18px;">
+            <thead><tr><th>사업자등록번호</th><th>상호</th><th>대표자</th><th>상태</th><th>과세유형</th></tr></thead>
+            <tbody>
+            <tr th:each="b : ${businesses}">
+                <td th:text="${b.bizRegNo}"></td>
+                <td th:text="${b.bizName}"></td>
+                <td th:text="${b.ceoName}"></td>
+                <td th:text="${b.bizStatus}"></td>
+                <td th:text="${b.taxType}"></td>
+            </tr>
+            </tbody>
+        </table>
+
+        <div th:each="b : ${businesses}" style="padding:14px 0; border-top:1px dashed var(--border);">
+            <div style="font-weight:700; font-size:13px; margin-bottom:8px;" th:text="${b.bizName} + ' 연결된 매장'"></div>
+
+            <div th:if="${b.storeId != null}" style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                <span class="tag">✓ 연결됨</span>
+                <a class="row-link" th:href="@{'/stores/' + ${b.storeId}}" th:text="${b.storeId}"></a>
+            </div>
+            <p th:if="${b.storeId == null}" class="muted" style="font-size:12.5px; margin-bottom:10px;">
+                아직 크롤링 데이터셋과 연결되지 않았어요. 아래에서 본인 매장을 찾아 연결하면, 경쟁사 비교 등에서 자동으로 "내 매장"으로 사용됩니다.
+            </p>
+
+            <form method="post" th:action="@{/biz-auth/link-store}" style="display:flex; gap:8px;">
+                <input type="hidden" name="bizRegNo" th:value="${b.bizRegNo}"/>
+                <select name="storeId" style="flex:1; padding:8px 10px; border:1px solid var(--border); border-radius:6px;">
+                    <option value="">연결 안 함</option>
+                    <option th:each="s : ${stores}" th:value="${s.storeId}" th:text="${s.name}"
+                            th:selected="${s.storeId == b.storeId}"></option>
+                </select>
+                <button type="submit" style="padding:8px 16px; border:1px solid var(--accent-dark); border-radius:6px; background:none; color:var(--accent-dark); font-weight:700; cursor:pointer;">
+                    저장
+                </button>
+            </form>
+        </div>
+    </div>
+</main>
+</body>
+</html>

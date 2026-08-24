@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('장부')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: nav}"></nav>
+<main>
+    <h1>장부</h1>
+
+    <style>
+        .pl-strip { display:flex; align-items:center; background:var(--card); border:1px solid var(--border); border-radius:8px; padding:16px 8px; margin-bottom:18px; }
+        .pl-col { flex:1; display:flex; flex-direction:column; align-items:center; gap:5px; }
+        .pl-div { width:1px; height:34px; background:var(--border); flex-shrink:0; }
+        .pl-label { font-size:11.5px; color:var(--muted); display:flex; align-items:center; gap:6px; }
+        .pl-amt { font-family:'IBM Plex Mono', monospace; font-size:15px; font-weight:700; color:var(--ink); }
+        .pl-amt.down { color:var(--rust); }
+        .pl-amt.up { color:var(--accent-dark); }
+        .pl-amt.strong { font-size:18px; }
+        .pl-badge { font-size:10px; font-weight:700; color:#fff; background:var(--accent-dark); padding:2px 7px; border-radius:999px; margin-left:4px; }
+        .pl-badge.warn { background:var(--rust); }
+
+        .ledger-tabs { display:flex; gap:8px; margin-bottom:20px; }
+        .ledger-tabs a {
+            padding:8px 16px; border-radius:999px; border:1px solid var(--border);
+            font-size:13px; font-weight:600; color:var(--muted); background:var(--card); text-decoration:none;
+        }
+        .ledger-tabs a.sel { background:var(--accent-dark); color:#fff; border-color:var(--accent-dark); }
+
+        .banner { padding:12px 16px; border-radius:8px; margin-bottom:18px; font-size:13px; }
+        .banner.ok { background:#F1ECE4; color:var(--accent-dark); }
+        .banner.err { background:#F3E1DA; color:var(--rust); }
+
+        .sync-figure { padding:14px 0; border-top:1px dashed var(--border); border-bottom:1px dashed var(--border); margin:14px 0; }
+        .sf-label { font-size:11.5px; color:var(--muted); }
+        .sf-amt { font-family:'IBM Plex Mono', monospace; font-size:24px; font-weight:700; color:var(--accent-dark); }
+
+        .field { margin-bottom:14px; }
+        .field label { display:block; font-size:12px; color:var(--muted); margin-bottom:5px; font-weight:600; }
+        .field input, .field select {
+            width:100%; padding:9px 11px; border:1px solid var(--border); border-radius:6px;
+            font-family:inherit; font-size:14px; background:var(--bg);
+        }
+        .field-row { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px; }
+        .check-row { display:flex; align-items:center; gap:7px; font-size:12.5px; color:var(--muted); font-weight:500; }
+        .submit-btn {
+            width:100%; padding:12px; border:none; border-radius:6px;
+            background:var(--accent-dark); color:#fff; font-weight:700; font-size:14px; cursor:pointer;
+        }
+        .ledger-item { display:flex; justify-content:space-between; align-items:center; padding:12px 4px; border-bottom:1px solid var(--border); }
+        .ledger-item:last-child { border-bottom:none; }
+        .li-cat { font-size:13px; font-weight:600; }
+        .li-vendor { font-weight:400; color:var(--muted); font-size:11.5px; }
+        .li-date { font-size:11px; color:var(--muted); font-family:'IBM Plex Mono', monospace; }
+        .li-amt { font-family:'IBM Plex Mono', monospace; font-weight:600; font-size:14px; color:var(--rust); }
+        .pay-tag { display:inline-block; margin-left:6px; padding:1px 7px; border-radius:999px; background:#f1ece4; font-size:9.5px; font-weight:600; color:var(--muted); }
+        .upload-row { display:flex; gap:8px; align-items:center; }
+        .upload-row input[type=file] { flex:1; font-size:12.5px; }
+
+        .mini-bars { display:flex; align-items:flex-end; gap:12px; padding-bottom:4px; }
+        .mb-col { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; }
+        .mb-val { font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--muted); margin-bottom:5px; white-space:nowrap; }
+        .mb-bar { width:100%; background:var(--border); border-radius:4px 4px 0 0; min-height:3px; }
+        .mb-bar.current { background:var(--accent-dark); }
+        .mb-x { font-size:11px; color:var(--muted); margin-top:8px; font-family:'IBM Plex Mono', monospace; }
+
+        .daily-row { display:flex; justify-content:space-between; align-items:center; padding:9px 4px; border-bottom:1px solid var(--border); }
+        .daily-row:last-child { border-bottom:none; }
+        .daily-date { font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--muted); }
+        .daily-amt { font-family:'IBM Plex Mono', monospace; font-weight:600; font-size:13.5px; }
+        .daily-src { font-size:9.5px; padding:1px 7px; border-radius:999px; background:#f1ece4; color:var(--muted); margin-left:6px; }
+        .daily-del { border:none; background:none; color:var(--rust); font-size:12px; cursor:pointer; padding:4px 6px; }
+    </style>
+
+    <div class="pl-strip">
+        <div class="pl-col">
+            <span class="pl-label">이번 달 매출</span>
+            <span class="pl-amt" th:text="${#numbers.formatInteger(overview.monthSales(),1,'COMMA')}">0</span>
+        </div>
+        <div class="pl-div"></div>
+        <div class="pl-col">
+            <span class="pl-label">지출</span>
+            <span class="pl-amt down" th:text="${#numbers.formatInteger(overview.monthExpense(),1,'COMMA')}">0</span>
+        </div>
+        <div class="pl-div"></div>
+        <div class="pl-col">
+            <span class="pl-label">순이익
+                <span class="pl-badge" th:classappend="${overview.netProfit() < 0} ? 'warn' : ''"
+                      th:text="${overview.netProfit() >= 0} ? '흑자' : '적자'">흑자</span>
+            </span>
+            <span class="pl-amt strong" th:classappend="${overview.netProfit() >= 0} ? 'up' : 'down'"
+                  th:text="${#numbers.formatInteger(overview.netProfit(),1,'COMMA')}">0</span>
+        </div>
+    </div>
+
+    <div class="ledger-tabs">
+        <a th:href="@{/ledger(view='status')}" th:classappend="${view == 'status'} ? 'sel' : ''">현황</a>
+        <a th:href="@{/ledger(view='register')}" th:classappend="${view == 'register'} ? 'sel' : ''">지출 등록</a>
+        <a th:href="@{/ledger(view='history')}" th:classappend="${view == 'history'} ? 'sel' : ''">내역</a>
+        <a th:href="@{/ledger(view='monthly')}" th:classappend="${view == 'monthly'} ? 'sel' : ''">월별 비교</a>
+    </div>
+
+    <div class="banner ok" th:if="${success != null}" th:text="${success}"></div>
+    <div class="banner err" th:if="${error != null}" th:text="'오류: ' + ${error}"></div>
+
+    <!-- ===== 현황 ===== -->
+    <div th:if="${view == 'status'}">
+        <div class="card" style="margin-bottom:20px;">
+            <h2>매출 리포트 업로드</h2>
+            <p class="muted" style="font-size:12.5px; margin-bottom:12px;">
+                POS에서 내보낸 매출 리포트(CSV·엑셀)를 올리면 자동으로 반영돼요. 헤더에 '날짜'와 '매출'(또는 금액) 컬럼이 있어야 합니다.
+            </p>
+            <form method="post" th:action="@{/ledger/sales/upload}" enctype="multipart/form-data" class="upload-row" style="margin-bottom:6px;">
+                <input type="file" name="file" accept=".csv,.xlsx,.xls" required/>
+                <button type="submit" style="padding:9px 16px; border:none; border-radius:6px; background:var(--accent); color:#fff; font-weight:700; cursor:pointer; white-space:nowrap;">업로드</button>
+            </form>
+            <p class="muted" style="font-size:11px;" th:if="${overview.lastUploadInfo() != null}"
+               th:text="'최근 업로드: ' + ${overview.lastUploadInfo()}"></p>
+
+            <div class="sync-figure">
+                <div class="sf-label">이번 달 누적 매출</div>
+                <div class="sf-amt" th:text="${#numbers.formatInteger(overview.monthSales(),1,'COMMA')} + '원'">0원</div>
+            </div>
+
+            <p class="muted" style="font-size:12px; margin-bottom:8px;">리포트가 없는 날은 오늘 매출만 간단히 입력할 수 있어요.</p>
+            <form method="post" th:action="@{/ledger/sales}" style="display:flex; gap:8px; align-items:flex-end;">
+                <div class="field" style="flex:1; margin-bottom:0;">
+                    <label>날짜</label>
+                    <input type="date" name="saleDate" th:value="${#dates.format(#dates.createNow(), 'yyyy-MM-dd')}" required/>
+                </div>
+                <div class="field" style="flex:1; margin-bottom:0;">
+                    <label>매출액 (원)</label>
+                    <input type="number" name="amount" placeholder="예: 1240000" required/>
+                </div>
+                <button type="submit" style="padding:9px 16px; border:none; border-radius:6px; background:var(--accent-dark); color:#fff; font-weight:700; cursor:pointer; white-space:nowrap;">등록</button>
+            </form>
+        </div>
+
+        <div class="card" style="margin-bottom:20px;">
+            <h2>이번 달 일별 매출 내역</h2>
+            <p class="muted" style="font-size:12.5px;" th:if="${#lists.isEmpty(dailySales)}">아직 등록된 매출이 없어요.</p>
+            <div th:each="d : ${dailySales}" class="daily-row">
+                <div>
+                    <span class="daily-date" th:text="${#temporals.format(d.saleDate, 'MM.dd')}"></span>
+                    <span class="daily-src" th:text="${d.source == 'UPLOAD'} ? '업로드' : '수동'"></span>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span class="daily-amt" th:text="${#numbers.formatInteger(d.amount,1,'COMMA')} + '원'"></span>
+                    <form method="post" th:action="@{'/ledger/sales/' + ${d.saleDate} + '/delete'}"
+                          onsubmit="return confirm('이 날짜 매출 기록을 삭제할까요?')">
+                        <button type="submit" class="daily-del">삭제</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>이번 달 지출 비중</h2>
+            <p class="muted" style="font-size:12.5px;" th:if="${#lists.isEmpty(overview.categoryBreakdown())}">아직 등록된 지출이 없어요.</p>
+            <div th:each="stat : ${overview.categoryBreakdown()}" class="bar-row">
+                <div class="bar-row-top">
+                    <span class="nm" th:text="${stat.category}">카테고리</span>
+                    <span th:text="${#numbers.formatInteger(stat.amount(),1,'COMMA')} + '원 (' + ${stat.percent()} + '%)'"></span>
+                </div>
+                <div class="bar-track"><div class="bar-fill us" th:style="'width:' + ${stat.percent()} + '%'"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 지출 등록 ===== -->
+    <div th:if="${view == 'register'}">
+        <div class="card" style="margin-bottom:20px;">
+            <h2>지출 기록하기</h2>
+            <form method="post" th:action="@{/ledger/expenses}">
+                <div class="field">
+                    <label>카테고리</label>
+                    <select name="category" required>
+                        <option value="재료 구입">재료 구입</option>
+                        <option value="임대료">임대료</option>
+                        <option value="인건비">인건비</option>
+                        <option value="공과금">공과금</option>
+                        <option value="카드수수료">카드수수료</option>
+                        <option value="세금">세금</option>
+                        <option value="기타">기타</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>거래처 (선택)</label>
+                    <input type="text" name="vendor" placeholder="예: 연남원두상회"/>
+                </div>
+                <div class="field">
+                    <label>금액 (원)</label>
+                    <input type="number" name="amount" placeholder="예: 340000" required/>
+                </div>
+                <div class="field">
+                    <label>날짜</label>
+                    <input type="date" name="expenseDate" th:value="${#dates.format(#dates.createNow(), 'yyyy-MM-dd')}" required/>
+                </div>
+                <div class="field">
+                    <label>결제수단</label>
+                    <select name="paymentMethod" required>
+                        <option value="카드">카드</option>
+                        <option value="현금">현금</option>
+                        <option value="계좌이체">계좌이체</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>메모 (선택)</label>
+                    <input type="text" name="memo" placeholder="예: 원두 20kg 발주"/>
+                </div>
+                <div class="field-row">
+                    <label class="check-row"><input type="checkbox" name="recurring" value="true"/> 매달 반복되는 고정비예요</label>
+                </div>
+                <button type="submit" class="submit-btn">지출 기록하기</button>
+            </form>
+        </div>
+
+        <div class="card">
+            <h2>등록된 고정비</h2>
+            <p class="muted" style="font-size:12.5px;" th:if="${#lists.isEmpty(fixedCosts)}">등록된 고정비가 없어요.</p>
+            <div th:each="fc : ${fixedCosts}" class="ledger-item">
+                <div>
+                    <span class="li-cat" th:text="${fc.category}">카테고리</span>
+                    <span class="li-vendor" th:if="${fc.vendor != null}" th:text="' · ' + ${fc.vendor}"></span><br/>
+                    <span class="li-date" th:text="'매달 ' + ${fc.dayOfMonth} + '일 자동 등록'"></span>
+                </div>
+                <span class="li-amt" th:text="'− ' + ${#numbers.formatInteger(fc.amount,1,'COMMA')}"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 내역 ===== -->
+    <div th:if="${view == 'history'}">
+        <div class="card">
+            <h2>최근 지출 내역</h2>
+            <p class="muted" style="font-size:12.5px;" th:if="${expenses.empty}">아직 등록된 지출이 없어요.</p>
+            <div th:each="e : ${expenses.content}" class="ledger-item">
+                <div>
+                    <span class="li-cat" th:text="${e.category}">카테고리</span>
+                    <span class="li-vendor" th:if="${e.vendor != null}" th:text="' · ' + ${e.vendor}"></span><br/>
+                    <span class="li-date" th:text="${#temporals.format(e.expenseDate, 'MM.dd')}"></span>
+                    <span class="pay-tag" th:if="${e.paymentMethod != null}" th:text="${e.paymentMethod}"></span>
+                    <span class="pay-tag" th:if="${e.isFixedCost == 'Y'}">고정비</span>
+                </div>
+                <span class="li-amt" th:text="'− ' + ${#numbers.formatInteger(e.amount,1,'COMMA')}"></span>
+            </div>
+            <div class="pager" th:if="${expenses.totalPages > 1}">
+                <a th:if="${expenses.hasPrevious()}" th:href="@{/ledger(view='history', page=${expenses.number - 1})}">← 이전</a>
+                <span class="muted" th:text="(${expenses.number} + 1) + ' / ' + ${expenses.totalPages}">1 / 1</span>
+                <a th:if="${expenses.hasNext()}" th:href="@{/ledger(view='history', page=${expenses.number + 1})}">다음 →</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 월별 비교 ===== -->
+    <div th:if="${view == 'monthly'}">
+        <div class="card" style="margin-bottom:18px;">
+            <h2>월별 매출 추이</h2>
+            <p class="muted" style="font-size:12.5px;" th:if="${#lists.isEmpty(monthlyComparison)}">아직 데이터가 없어요.</p>
+            <div class="mini-bars" th:unless="${#lists.isEmpty(monthlyComparison)}">
+                <div class="mb-col" th:each="m, iter : ${monthlyComparison}">
+                    <span class="mb-val" th:text="${#numbers.formatInteger(m.sales(),1,'COMMA')}"></span>
+                    <div class="mb-bar" th:classappend="${iter.last} ? 'current' : ''"
+                         th:style="'height:' + (${m.salesBarPercent()} * 1.4) + 'px'"></div>
+                    <span class="mb-x" th:text="${m.yearMonth()}"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>월별 손익 비교</h2>
+            <table>
+                <thead><tr><th>월</th><th>매출</th><th>지출</th><th>순이익</th></tr></thead>
+                <tbody>
+                <tr th:each="m : ${monthlyComparison}">
+                    <td th:text="${m.yearMonth}">월</td>
+                    <td th:text="${#numbers.formatInteger(m.sales(),1,'COMMA')}">0</td>
+                    <td class="muted" th:text="${#numbers.formatInteger(m.expense(),1,'COMMA')}">0</td>
+                    <td th:style="'font-weight:700; color:' + (${m.netProfit() >= 0} ? 'var(--accent-dark)' : 'var(--rust)')"
+                        th:text="${#numbers.formatInteger(m.netProfit(),1,'COMMA')}">0</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+</body>
+</html>

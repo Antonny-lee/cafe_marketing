@@ -1,0 +1,21 @@
+# secrets
+Database/.env
+
+# python
+__pycache__/
+*.pyc
+
+# build artifacts
+cafe-dashboard/target/
+cafe-dashboard.zip
+
+# logs
+cafe-dashboard/run*.log
+cafe-dashboard/run*.err.log
+
+# IDE
+.vscode/
+.idea/
+
+# misc
+Web crawling/.claude/

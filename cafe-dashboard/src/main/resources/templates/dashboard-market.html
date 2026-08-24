@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('상권')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: nav}"></nav>
+<main>
+    <h1>상권</h1>
+    <p style="margin:-14px 0 20px;"><a href="/stores" class="row-link" style="font-size:13px; font-weight:600;">전체 매장 목록 보기 →</a></p>
+
+    <!-- ===== 매장 대시보드 파트 ===== -->
+    <div class="grid grid-3">
+        <div class="card stat">
+            <div class="num" th:text="${overview.storeCount()}">0</div>
+            <div class="label">등록 매장 수</div>
+        </div>
+        <div class="card stat">
+            <div class="num" th:text="${overview.reviewCount()}">0</div>
+            <div class="label">누적 리뷰 수</div>
+        </div>
+        <div class="card stat">
+            <div class="num" th:text="${#numbers.formatDecimal(overview.avgRating(), 1, 2)}">0</div>
+            <div class="label">전체 평균 평점</div>
+        </div>
+    </div>
+
+    <div class="grid grid-2 section-title">
+        <div class="card">
+            <h2>리뷰 키워드 카테고리 분포</h2>
+            <canvas id="categoryChart" height="110"></canvas>
+        </div>
+        <div class="card">
+            <h2>가장 많이 언급된 태그 TOP 15</h2>
+            <div th:each="tag : ${overview.topTags()}">
+                <span class="tag" th:text="${tag.id.tagText} + ' (' + ${tag.mentionCount} + ')'">태그</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="card section-title">
+        <h2>평점 높은 매장 TOP 10 (리뷰 5건 이상)</h2>
+        <table>
+            <thead><tr><th>매장명</th><th>주소</th><th>평균 평점</th><th>리뷰 수</th></tr></thead>
+            <tbody>
+            <tr th:each="row : ${overview.topRatedStores()}">
+                <td><a class="row-link" th:href="@{'/stores/' + ${row.store().storeId}}" th:text="${row.store().name}">매장명</a></td>
+                <td class="muted" th:text="${row.store().address}">주소</td>
+                <td class="badge-rating" th:text="${#numbers.formatDecimal(row.avgRating(), 1, 2)}">0</td>
+                <td th:text="${row.reviewCount()}">0</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- ===== 상권분석 파트 ===== -->
+    <div th:if="${report == null}" class="card section-title">
+        <p class="muted">아직 등록된 상권분석 리포트가 없어요.</p>
+    </div>
+
+    <div th:if="${report != null}">
+        <h1 class="section-title" style="margin-top:36px;">상권분석</h1>
+        <div class="area-header">
+            <span class="area-loc" th:text="${report.location}"></span>
+            <span class="area-quarter" th:text="${report.industry} + ' · ' + ${report.quarter}"></span>
+        </div>
+
+        <div class="opinion-card" th:if="${report.opinionText != null}">
+            <div class="oc-label">종합의견</div>
+            <p th:text="${report.opinionText}"></p>
+        </div>
+
+        <div class="rank-row" th:if="${m.get('점포수 순위') != null}">
+            <div class="rank-chip gold">
+                <span class="rc-num" th:text="${m.get('점포수 순위').value} + '위'"></span>
+                <span class="rc-label">점포수 순위</span>
+            </div>
+            <div class="rank-chip" th:if="${m.get('매출액 순위') != null}">
+                <span class="rc-num" th:text="${m.get('매출액 순위').value} + '위'"></span>
+                <span class="rc-label">매출액 순위</span>
+            </div>
+            <div class="rank-chip" th:if="${m.get('유동인구 순위') != null}">
+                <span class="rc-num" th:text="${m.get('유동인구 순위').value} + '위'"></span>
+                <span class="rc-label">유동인구 순위</span>
+            </div>
+        </div>
+        <p class="muted" style="font-size:11px; margin:-14px 0 22px;" th:if="${m.get('점포수 순위') != null}"
+           th:text="${m.get('점포수 순위').note}"></p>
+
+        <h2 class="section-title">상권 현황</h2>
+        <div class="stat-grid">
+            <div class="stat-mini" th:if="${m.get('점포수') != null}">
+                <span class="sm-label">점포수</span>
+                <span class="sm-val" th:text="${#numbers.formatInteger(m.get('점포수').value,1,'COMMA')} + '개'"></span>
+                <span class="sm-delta down" th:if="${m.get('점포수').yoyChange != null}" th:text="'전년동기 ' + ${m.get('점포수').yoyChange}"></span>
+            </div>
+            <div class="stat-mini" th:if="${m.get('생존율(3년)') != null}">
+                <span class="sm-label">3년 생존율</span>
+                <span class="sm-val" th:text="${m.get('생존율(3년)').value} + '%'"></span>
+                <span class="sm-delta down" th:if="${m.get('생존율(3년)').yoyChange != null}" th:text="'전년동기 ' + ${m.get('생존율(3년)').yoyChange}"></span>
+            </div>
+            <div class="stat-mini" th:if="${m.get('평균영업기간') != null}">
+                <span class="sm-label">평균 영업기간</span>
+                <span class="sm-val" th:text="${m.get('평균영업기간').value} + '년'"></span>
+            </div>
+            <div class="stat-mini" th:if="${m.get('개업수') != null}">
+                <span class="sm-label">개업수</span>
+                <span class="sm-val" th:text="${m.get('개업수').value} + '개'"></span>
+                <span class="sm-delta down" th:if="${m.get('개업수').yoyChange != null}" th:text="'전년동기 ' + ${m.get('개업수').yoyChange}"></span>
+            </div>
+            <div class="stat-mini" th:if="${m.get('폐업수') != null}">
+                <span class="sm-label">폐업수</span>
+                <span class="sm-val" th:text="${m.get('폐업수').value} + '개'"></span>
+                <span class="sm-delta up" th:if="${m.get('폐업수').yoyChange != null}" th:text="'전년동기 ' + ${m.get('폐업수').yoyChange}"></span>
+            </div>
+        </div>
+
+        <h2 class="section-title">매출</h2>
+        <div class="stat-grid">
+            <div class="stat-mini" th:if="${m.get('매출액(월평균)') != null}">
+                <span class="sm-label">점포당 월평균 매출액</span>
+                <span class="sm-val" th:text="${#numbers.formatInteger(m.get('매출액(월평균)').value,1,'COMMA')} + '만원'"></span>
+            </div>
+            <div class="stat-mini" th:if="${m.get('매출건수(월평균)') != null}">
+                <span class="sm-label">점포당 월평균 매출건수</span>
+                <span class="sm-val" th:text="${#numbers.formatInteger(m.get('매출건수(월평균)').value,1,'COMMA')} + '건'"></span>
+                <span class="sm-delta down" th:if="${m.get('매출건수(월평균)').yoyChange != null}" th:text="'전년동기 ' + ${m.get('매출건수(월평균)').yoyChange}"></span>
+            </div>
+        </div>
+
+        <h2 class="section-title">5분기 추이 (2025년 2분기 ~ 2026년 2분기)</h2>
+        <div class="trend-card" th:if="${!#maps.isEmpty(seriesByMetric)}">
+            <div class="metric-chips" id="trendChips">
+                <button type="button" class="chip sel" data-metric="점포수" onclick="selectTrendMetric('점포수', this)">점포수</button>
+                <button type="button" class="chip" data-metric="매출건수" onclick="selectTrendMetric('매출건수', this)">매출건수</button>
+                <button type="button" class="chip" data-metric="매출액" onclick="selectTrendMetric('매출액', this)">매출액</button>
+                <button type="button" class="chip" data-metric="유동인구밀도" onclick="selectTrendMetric('유동인구밀도', this)">유동인구</button>
+            </div>
+            <div class="trend-head">
+                <span class="trend-title" id="trendUnit">단위: 개 (점포수)</span>
+                <span class="muted" style="font-size:10.5px;">가로축: 분기 · 세로축: 값</span>
+            </div>
+            <div class="trend-legend">
+                <span><span class="tl-dot" style="background:#3E4A2A;"></span>선택상권</span>
+                <span><span class="tl-dot" style="background:#B98A2E;"></span>자치구</span>
+                <span><span class="tl-dot" style="background:#A8462E;"></span>서울시</span>
+            </div>
+            <svg id="trendSvg" class="line-svg" viewBox="0 0 560 200"></svg>
+        </div>
+
+        <h2 class="section-title">요일별 매출 랭킹</h2>
+        <div class="rank-list-card" th:if="${rankedByCategory.get('요일별매출') != null}">
+            <div class="rank-list-row" th:each="bar, iter : ${rankedByCategory.get('요일별매출')}">
+                <span class="rl-medal" th:classappend="${bar.top} ? 'gold' : ''" th:text="${iter.index} + 1"></span>
+                <span class="rl-label" th:text="${bar.label}"></span>
+                <div class="rl-track"><div class="rl-fill" th:classappend="${bar.top} ? 'gold' : ''" th:style="'width:' + ${bar.widthPercent} + '%'"></div></div>
+                <span class="rl-pct" th:text="${bar.value} + '%'"></span>
+            </div>
+        </div>
+
+        <h2 class="section-title">시간대별 매출 비중</h2>
+        <div class="trend-card" th:if="${breakdownByCategory.get('시간대별매출') != null}">
+            <svg id="timeOfDaySvg" class="line-svg" viewBox="0 0 560 190"></svg>
+            <p class="muted" id="timeOfDayCaption" style="font-size:12.5px; margin:8px 0 12px; padding-top:10px; border-top:1px dashed var(--border);"></p>
+        </div>
+
+        <h2 class="section-title">성별 매출 비중</h2>
+        <div class="donut-row-card card" style="display:flex; align-items:center; gap:18px; margin-bottom:16px;" th:if="${genderDonut != null}">
+            <div class="donut-wrap">
+                <div class="donut" th:style="${genderDonut.gradientCss}"></div>
+                <div class="donut-hole">
+                    <span class="donut-num" th:text="${genderDonut.value} + '%'"></span>
+                    <span class="donut-sub">여성</span>
+                </div>
+            </div>
+            <p class="muted" style="font-size:12px; margin:0;">여성 고객 방문에 도움이 되는 요소에 투자를 고려해보세요.</p>
+        </div>
+
+        <div class="mini-donut-row" th:if="${!#lists.isEmpty(industryDonuts)}">
+            <div class="mini-donut-item" th:each="d : ${industryDonuts}">
+                <div class="donut-wrap sm">
+                    <div class="donut" th:style="${d.gradientCss}"></div>
+                    <div class="donut-hole sm">
+                        <span class="donut-num sm" th:text="${d.value} + '%'"></span>
+                    </div>
+                </div>
+                <span class="mdi-label" th:text="${d.label} + ' 여성비중'"></span>
+            </div>
+        </div>
+
+        <h2 class="section-title">연령대별 외식업 매출 비중</h2>
+        <div class="rank-list-card" th:if="${rankedByCategory.get('연령대별외식업매출') != null}">
+            <div class="rank-list-row" th:each="bar : ${rankedByCategory.get('연령대별외식업매출')}">
+                <span class="rl-label" th:text="${bar.label}"></span>
+                <div class="rl-track"><div class="rl-fill" th:classappend="${bar.top} ? 'gold' : ''" th:style="'width:' + ${bar.widthPercent} + '%'"></div></div>
+                <span class="rl-pct" th:text="${bar.value} + '%'"></span>
+            </div>
+        </div>
+
+        <h2 class="section-title">유동·거주·직장 인구</h2>
+        <div class="stat-grid">
+            <div class="stat-mini" th:if="${m.get('유동인구(일평균)') != null}">
+                <span class="sm-label">유동인구 (일평균)</span>
+                <span class="sm-val" th:text="${#numbers.formatInteger(m.get('유동인구(일평균)').value,1,'COMMA')} + '명'"></span>
+            </div>
+            <div class="stat-mini" th:if="${m.get('주거인구') != null}">
+                <span class="sm-label">주거인구</span>
+                <span class="sm-val" th:text="${#numbers.formatInteger(m.get('주거인구').value,1,'COMMA')} + '명'"></span>
+            </div>
+            <div class="stat-mini" th:if="${m.get('직장인구') != null}">
+                <span class="sm-label">직장인구</span>
+                <span class="sm-val" th:text="${#numbers.formatInteger(m.get('직장인구').value,1,'COMMA')} + '명'"></span>
+            </div>
+            <div class="stat-mini" th:if="${m.get('가구세대수') != null}">
+                <span class="sm-label">가구세대수</span>
+                <span class="sm-val" th:text="${#numbers.formatInteger(m.get('가구세대수').value,1,'COMMA')} + '가구'"></span>
+            </div>
+        </div>
+
+        <div class="peak-card">
+            <div class="peak-row" th:if="${m.get('요일별 유동인구 1위') != null}">
+                <span class="peak-ic">📅</span>
+                <div><div class="peak-title">요일별 유동인구 1위</div><div class="peak-sub" th:text="${m.get('요일별 유동인구 1위').value}"></div></div>
+            </div>
+            <div class="peak-row" th:if="${m.get('시간대별 유동인구 1위') != null}">
+                <span class="peak-ic">🕐</span>
+                <div><div class="peak-title">시간대별 유동인구 1위</div><div class="peak-sub" th:text="${m.get('시간대별 유동인구 1위').value}"></div></div>
+            </div>
+            <div class="peak-row" th:if="${m.get('성별·연령별 유동인구 1위') != null}">
+                <span class="peak-ic">🚶</span>
+                <div><div class="peak-title">유동인구 주요 고객층</div><div class="peak-sub" th:text="${m.get('성별·연령별 유동인구 1위').value}"></div></div>
+            </div>
+            <div class="peak-row" th:if="${m.get('성별·연령별 주거인구 1위') != null}">
+                <span class="peak-ic">🏠</span>
+                <div><div class="peak-title">주거인구 주요 층</div><div class="peak-sub" th:text="${m.get('성별·연령별 주거인구 1위').value}"></div></div>
+            </div>
+            <div class="peak-row" th:if="${m.get('성별·연령별 직장인구 1위') != null}">
+                <span class="peak-ic">💼</span>
+                <div><div class="peak-title">직장인구 주요 층</div><div class="peak-sub" th:text="${m.get('성별·연령별 직장인구 1위').value}"></div></div>
+            </div>
+        </div>
+
+        <h2 class="section-title">임대·소득</h2>
+        <div class="stat-grid">
+            <div class="stat-mini" th:if="${m.get('임대시세(1층, 3.3㎡당)') != null}">
+                <span class="sm-label">1층 임대시세 (3.3㎡당)</span>
+                <span class="sm-val" th:text="${#numbers.formatInteger(m.get('임대시세(1층, 3.3㎡당)').value,1,'COMMA')} + '원'"></span>
+            </div>
+            <div class="stat-mini" th:if="${m.get('소득수준') != null}">
+                <span class="sm-label">주거인구 소득수준</span>
+                <span class="sm-val" th:text="${m.get('소득수준').value} + '분위'"></span>
+            </div>
+        </div>
+
+        <h2 class="section-title" th:if="${m.get('업종분포') != null or m.get('소비트렌드 1위') != null}">업종·소비</h2>
+        <div class="card" style="margin-bottom:16px;" th:if="${m.get('업종분포') != null}">
+            <p style="margin:0; font-size:12.5px;"><b>업종분포</b> · <span th:text="${m.get('업종분포').value}"></span></p>
+        </div>
+        <div class="card" style="margin-bottom:16px;" th:if="${m.get('소비트렌드 1위') != null}">
+            <p style="margin:0; font-size:12.5px;"><b>소비트렌드</b> · <span th:text="${m.get('소비트렌드 1위').value}"></span></p>
+        </div>
+
+        <h2 class="section-title" th:if="${m.get('주요 시설') != null}">주요 시설</h2>
+        <div class="facility-grid" th:if="${m.get('주요 시설') != null}">
+            <div class="facility-item" th:each="f : ${#strings.arraySplit(m.get('주요 시설').value, ',')}">
+                <div class="facility-num" th:text="${#strings.trim(f)}"></div>
+            </div>
+        </div>
+
+        <div class="source-note">
+            출처 · 서울신용보증재단 상권분석 리포트 (report.docx 자동 파싱). 카드사 추정 매출 기반이라 실제와 차이가 있을 수 있어요.
+        </div>
+    </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script th:inline="javascript">
+    const catLabels = /*[[${overview.categoryStats().![tagCategory]}]]*/ [];
+    const catValues = /*[[${overview.categoryStats().![totalMentions]}]]*/ [];
+    new Chart(document.getElementById('categoryChart'), {
+        type: 'bar',
+        data: {
+            labels: catLabels,
+            datasets: [{ label: '언급 횟수', data: catValues, backgroundColor: '#a9704f' }]
+        },
+        options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+    });
+</script>
+
+<script th:if="${report != null}" th:inline="javascript">
+    const seriesByMetric = /*[[${seriesByMetric}]]*/ {};
+    const timeOfDayRows = /*[[${breakdownByCategory.get('시간대별매출')}]]*/ [];
+
+    function pathFor(points) {
+        return points.map((p, i) => (i === 0 ? 'M' : 'L') + p.x + ',' + p.y).join(' ');
+    }
+
+    function renderTrend(metric) {
+        const rows = seriesByMetric[metric] || [];
+        const svg = document.getElementById('trendSvg');
+        if (!rows.length) { svg.innerHTML = ''; return; }
+
+        const values = [];
+        rows.forEach(r => { values.push(r.mineValue); if (r.guValue) values.push(r.guValue); if (r.seoulValue) values.push(r.seoulValue); });
+        const max = Math.max(...values), min = Math.min(...values);
+        const pad = (max - min) * 0.15 || max * 0.1 || 1;
+        const yMax = max + pad, yMin = Math.max(0, min - pad);
+
+        const W = 560, H = 200, left = 20, right = 20, top = 20, bottom = 30;
+        const xStep = (W - left - right) / (rows.length - 1);
+        const yFor = v => top + (H - top - bottom) * (1 - (v - yMin) / (yMax - yMin));
+
+        function series(key, color, showLabels) {
+            const pts = rows.map((r, i) => ({ x: left + i * xStep, y: yFor(r[key]), v: r[key] }));
+            if (pts.some(p => p.v == null)) return '';
+            let s = '<path class="trend-line" d="' + pathFor(pts) + '" stroke="' + color + '"/>';
+            pts.forEach(p => {
+                s += '<circle class="trend-dot" cx="' + p.x + '" cy="' + p.y + '" r="4" fill="' + color + '"/>';
+                if (showLabels) {
+                    s += '<text class="line-val" x="' + p.x + '" y="' + (p.y - 10) + '" fill="' + color + '" font-weight="700">' + Math.round(p.v).toLocaleString() + '</text>';
+                }
+            });
+            return s;
+        }
+
+        let labels = '';
+        rows.forEach((r, i) => {
+            labels += '<text class="line-val" x="' + (left + i * xStep) + '" y="' + (H - 8) + '">' + r.quarterLabel.replace('년 ', '.').replace('분기', 'Q') + '</text>';
+        });
+
+        svg.innerHTML = series('seoulValue', '#A8462E', false) + series('guValue', '#B98A2E', false) + series('mineValue', '#3E4A2A', true) + labels;
+    }
+
+    const UNITS = {
+        '점포수': '단위: 개 (점포수)',
+        '매출건수': '단위: 건 (점포당 월평균 매출건수)',
+        '매출액': '단위: 만원 (점포당 월평균 매출액)',
+        '유동인구밀도': '단위: 명/ha (유동인구 밀도)'
+    };
+
+    function selectTrendMetric(metric, el) {
+        document.querySelectorAll('#trendChips .chip').forEach(c => c.classList.remove('sel'));
+        el.classList.add('sel');
+        document.getElementById('trendUnit').textContent = UNITS[metric] || '';
+        renderTrend(metric);
+    }
+
+    renderTrend('점포수');
+
+    function renderTimeOfDay() {
+        const svg = document.getElementById('timeOfDaySvg');
+        if (!svg || !timeOfDayRows.length) return;
+
+        const W = 560, H = 190, left = 24, right = 24, top = 16, bottom = 30;
+        const max = Math.max(...timeOfDayRows.map(r => r.value));
+        const yMax = max * 1.15;
+        const xStep = (W - left - right) / (timeOfDayRows.length - 1);
+        const yFor = v => top + (H - top - bottom) * (1 - v / yMax);
+
+        const pts = timeOfDayRows.map((r, i) => ({ x: left + i * xStep, y: yFor(r.value), v: r.value, label: r.label }));
+        const linePath = pts.map((p, i) => (i === 0 ? 'M' : 'L') + p.x + ',' + p.y).join(' ');
+        const areaPath = linePath + ' L' + pts[pts.length - 1].x + ',' + (H - bottom) + ' L' + pts[0].x + ',' + (H - bottom) + ' Z';
+
+        const peak = pts.reduce((a, b) => (b.v > a.v ? b : a));
+
+        let svgContent = '<path d="' + areaPath + '" fill="#3E4A2A" opacity="0.12" stroke="none"/>';
+        svgContent += '<path class="trend-line" d="' + linePath + '" stroke="#3E4A2A"/>';
+        pts.forEach(p => {
+            const isPeak = p === peak;
+            svgContent += '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + (isPeak ? 5 : 0) + '" fill="' + (isPeak ? '#B98A2E' : '#3E4A2A') + '" class="trend-dot"/>';
+            svgContent += '<text class="line-val" x="' + p.x + '" y="' + (H - 10) + '"' + (isPeak ? ' font-weight="700" fill="#241D14"' : '') + '>' + p.label + '</text>';
+        });
+        svg.innerHTML = svgContent;
+
+        document.getElementById('timeOfDayCaption').innerHTML =
+            '오후 ' + peak.label + '에 매출 비중이 <b style="color:#B98A2E;">' + peak.v + '%</b>로 가장 높아요';
+    }
+
+    renderTimeOfDay();
+</script>
+</body>
+</html>

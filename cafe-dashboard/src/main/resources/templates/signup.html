@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('회원가입')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: nav}"></nav>
+<main style="max-width:420px;">
+    <h1>회원가입</h1>
+
+    <div class="card" th:if="${error != null}" style="border-color:#a8462e; margin-bottom:16px;">
+        <p style="margin:0;" th:text="${error}"></p>
+    </div>
+
+    <div class="card">
+        <form method="post" th:action="@{/signup}">
+            <div class="field" style="margin-bottom:12px;">
+                <label class="muted" style="display:block; font-size:12px; margin-bottom:4px;">이메일</label>
+                <input type="email" name="email" placeholder="owner@example.com" required
+                       style="width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:6px;"/>
+            </div>
+            <div class="field" style="margin-bottom:12px;">
+                <label class="muted" style="display:block; font-size:12px; margin-bottom:4px;">비밀번호 (8자 이상)</label>
+                <input type="password" name="password" required
+                       style="width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:6px;"/>
+            </div>
+            <div class="field" style="margin-bottom:16px;">
+                <label class="muted" style="display:block; font-size:12px; margin-bottom:4px;">비밀번호 확인</label>
+                <input type="password" name="passwordConfirm" required
+                       style="width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:6px;"/>
+            </div>
+            <button type="submit" style="width:100%; padding:12px; border:none; border-radius:6px; background:var(--accent-dark); color:#fff; font-weight:700; cursor:pointer;">
+                회원가입
+            </button>
+        </form>
+        <p class="muted" style="margin-top:14px; font-size:13px;">
+            이미 계정이 있으신가요? <a href="/login" style="color:var(--accent-dark); font-weight:600;">로그인</a>
+        </p>
+    </div>
+</main>
+</body>
+</html>

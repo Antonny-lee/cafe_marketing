@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(${data.store().name} + ' 리뷰')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: nav}"></nav>
+<main>
+    <p class="muted" style="margin-bottom:4px;">
+        <a class="row-link" th:href="@{'/stores/' + ${data.store().storeId}}">← <span th:text="${data.store().name}"></span> 매장 정보로</a>
+    </p>
+    <h1>
+        <span th:text="${data.store().name}"></span> 전체 리뷰
+        <span class="mono" style="font-size:16px; color:var(--muted); font-weight:500;">(<span th:text="${data.reviewCount()}"></span>건)</span>
+    </h1>
+
+    <div class="card" style="margin-bottom:20px; display:flex; gap:24px; align-items:center;">
+        <div>
+            <div class="score-num" th:text="${data.avgRating() != null ? #numbers.formatDecimal(data.avgRating(),1,2) : '-'}"></div>
+            <div class="score-sub">평균 평점</div>
+        </div>
+        <div>
+            <div class="score-num" th:text="${data.reviewCount()}"></div>
+            <div class="score-sub">누적 리뷰</div>
+        </div>
+    </div>
+
+    <div class="review-list">
+        <div class="review-card" th:each="rv : ${data.reviews().content}">
+            <div class="rc-top">
+                <span th:if="${rv.rating != null}" class="rc-rating" th:text="'★ ' + ${rv.rating}"></span>
+                <span th:if="${rv.rating == null}" class="rc-rating dim">평점 없음</span>
+                <span class="rc-meta" th:text="${rv.metaLine}"></span>
+            </div>
+            <p class="rc-text" th:text="${rv.reviewText}"></p>
+            <div class="rc-date" th:text="${rv.reviewDateText}"></div>
+        </div>
+    </div>
+
+    <div class="pager">
+        <a th:if="${data.reviews().hasPrevious()}"
+           th:href="@{'/stores/' + ${data.store().storeId} + '/reviews'(page=${data.reviews().number - 1})}">← 이전</a>
+        <span class="muted" th:text="(${data.reviews().number} + 1) + ' / ' + ${data.reviews().totalPages}">1 / 1</span>
+        <a th:if="${data.reviews().hasNext()}"
+           th:href="@{'/stores/' + ${data.store().storeId} + '/reviews'(page=${data.reviews().number + 1})}">다음 →</a>
+    </div>
+</main>
+</body>
+</html>

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(${detail.store().name})}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: nav}"></nav>
+<main>
+    <h1 th:text="${detail.store().name}">매장명</h1>
+    <p class="muted" th:text="${detail.store().address}">주소</p>
+    <p class="muted" th:text="${detail.store().subwayInfo}">지하철</p>
+
+    <div class="card" style="margin-bottom:20px; display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+        <button type="button" id="refreshBtn"
+                th:attr="data-store-id=${detail.store().storeId}"
+                style="padding:9px 18px; border:none; border-radius:8px; background:var(--accent-dark); color:#fff; font-weight:700; cursor:pointer;">
+            최신 리뷰 · 태그 갱신
+        </button>
+        <span id="refreshStatus" class="muted" style="font-size:12.5px;"></span>
+    </div>
+
+    <script th:inline="javascript">
+        (function () {
+            const btn = document.getElementById('refreshBtn');
+            const statusEl = document.getElementById('refreshStatus');
+            const storeId = btn.dataset.storeId;
+            let polling = null;
+
+            function render(data) {
+                if (data.status === 'RUNNING') {
+                    const last = data.log.length ? data.log[data.log.length - 1] : '진행 중...';
+                    statusEl.textContent = '갱신 중... ' + last;
+                } else if (data.status === 'DONE') {
+                    statusEl.textContent = '완료 — 새 리뷰 ' + (data.newReviews ?? 0) + '건, 태그 ' + (data.tagRows ?? 0) + '건 반영됨. 새로고침하면 반영된 데이터가 보여요.';
+                    btn.disabled = false;
+                    clearInterval(polling);
+                } else if (data.status === 'ERROR') {
+                    statusEl.textContent = '갱신 실패: ' + (data.errorMessage || '알 수 없는 오류');
+                    btn.disabled = false;
+                    clearInterval(polling);
+                }
+            }
+
+            async function poll() {
+                try {
+                    const res = await fetch('/stores/' + storeId + '/refresh/status');
+                    if (!res.ok) return;
+                    render(await res.json());
+                } catch (e) { /* 다음 폴링에서 재시도 */ }
+            }
+
+            btn.addEventListener('click', async () => {
+                btn.disabled = true;
+                statusEl.textContent = '갱신 시작 중...';
+                const res = await fetch('/stores/' + storeId + '/refresh', { method: 'POST' });
+                render(await res.json());
+                polling = setInterval(poll, 2500);
+            });
+        })();
+    </script>
+
+    <div class="grid grid-3">
+        <div class="card stat">
+            <div class="num" th:text="${detail.avgRating() != null ? #numbers.formatDecimal(detail.avgRating(), 1, 2) : '-'}">-</div>
+            <div class="label">평균 평점</div>
+        </div>
+        <div class="card stat">
+            <div class="num" th:text="${detail.reviewCount()}">0</div>
+            <div class="label">리뷰 수</div>
+        </div>
+        <div class="card stat">
+            <div class="num" th:text="${#lists.size(detail.menus())}">0</div>
+            <div class="label">메뉴 수</div>
+        </div>
+    </div>
+
+    <style>
+        .intro-card { border-left: 3px solid var(--accent); }
+        .intro-text {
+            font-size: 14.5px;
+            line-height: 1.9;
+            color: var(--ink);
+            max-width: 680px;
+            white-space: pre-line;
+            letter-spacing: -0.1px;
+        }
+    </style>
+
+    <div class="card section-title intro-card" th:if="${detail.intro() != null}">
+        <h2>소개</h2>
+        <p class="intro-text" th:text="${detail.intro().introText}">소개글</p>
+    </div>
+
+    <div class="card section-title" th:if="${!#lists.isEmpty(detail.aiBriefings())}">
+        <h2>AI 브리핑</h2>
+        <ul>
+            <li th:each="b : ${detail.aiBriefings()}" th:text="${b.sentence}">문장</li>
+        </ul>
+    </div>
+
+    <div class="card section-title">
+        <h2>메뉴</h2>
+        <table>
+            <thead><tr><th>메뉴명</th><th>가격</th></tr></thead>
+            <tbody>
+            <tr th:each="m : ${detail.menus()}">
+                <td th:text="${m.menuName}">메뉴명</td>
+                <td th:text="${m.priceKrw != null ? #numbers.formatInteger(m.priceKrw, 1, 'COMMA') + '원' : m.priceNote}">가격</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card section-title" th:if="${!#lists.isEmpty(detail.tags())}">
+        <h2>리뷰 키워드</h2>
+        <div>
+            <span class="tag" th:each="tag : ${detail.tags()}"
+                  th:text="${tag.id.tagText} + ' (' + ${tag.mentionCount} + ')'">태그</span>
+        </div>
+    </div>
+
+    <div class="section-title" th:replace="~{fragments/layout :: wordcloud(${wordCloud}, null)}"></div>
+
+    <div class="card section-title" th:each="entry : ${detail.infoBySection()}">
+        <h2 th:text="${entry.key}">섹션</h2>
+        <table>
+            <tbody>
+            <tr th:each="item : ${entry.value}">
+                <td th:text="${item.itemText}">항목</td>
+                <td class="muted" th:text="${item.detail}">상세</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card section-title">
+        <h2>리뷰 (<span th:text="${detail.reviewCount()}">0</span>건)</h2>
+        <table>
+            <thead><tr><th>평점</th><th>날짜</th><th>방문시간</th><th>내용</th></tr></thead>
+            <tbody>
+            <tr th:each="r : ${detail.reviews().content}">
+                <td class="badge-rating" th:text="${r.rating}">0</td>
+                <td class="muted" th:text="${r.reviewDateText}">날짜</td>
+                <td class="muted" th:text="${r.visitTime}">방문시간</td>
+                <td th:text="${r.reviewText}">내용</td>
+            </tr>
+            </tbody>
+        </table>
+        <div class="pager">
+            <a th:if="${detail.reviews().hasPrevious()}"
+               th:href="@{'/stores/' + ${detail.store().storeId}(page=${detail.reviews().number - 1})}">← 이전</a>
+            <span class="muted" th:text="(${detail.reviews().number} + 1) + ' / ' + ${detail.reviews().totalPages}">1 / 1</span>
+            <a th:if="${detail.reviews().hasNext()}"
+               th:href="@{'/stores/' + ${detail.store().storeId}(page=${detail.reviews().number + 1})}">다음 →</a>
+        </div>
+    </div>
+</main>
+</body>
+</html>

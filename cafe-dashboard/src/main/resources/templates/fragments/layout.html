@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:fragment="head(title)">
+    <meta charset="UTF-8"/>
+    <title th:text="${title} + ' - 단골장부'">단골장부</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700;900&family=Pretendard:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #F6F1E7;
+            --card: #FFFDF8;
+            --ink: #241D14;
+            --muted: #5C5245;
+            --accent: #B98A2E;
+            --accent-dark: #3E4A2A;
+            --rust: #A8462E;
+            --gold: #B98A2E;
+            --border: #D8CDB6;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: "Pretendard", "Malgun Gothic", -apple-system, sans-serif;
+            background: var(--bg);
+            background-image: radial-gradient(circle at 1px 1px, rgba(36,29,20,0.06) 1px, transparent 0);
+            background-size: 14px 14px;
+            color: var(--ink);
+            -webkit-font-smoothing: antialiased;
+        }
+        nav {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            padding: 16px 32px;
+            background: var(--accent-dark);
+            color: #fff;
+        }
+        nav a { color: #fff; text-decoration: none; font-weight: 600; opacity: 0.9; }
+        nav a:hover { opacity: 1; text-decoration: underline; }
+        nav .brand {
+            font-family: 'Noto Serif KR', serif;
+            font-weight: 900;
+            font-size: 19px;
+            letter-spacing: -0.3px;
+            margin-right: auto;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+        }
+        nav .brand small {
+            font-family: 'IBM Plex Mono', monospace;
+            font-weight: 500;
+            font-size: 10px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            opacity: 0.7;
+        }
+        main { padding: 28px 32px 60px; max-width: 1200px; margin: 0 auto; }
+        h1 { font-family: 'Noto Serif KR', serif; font-weight: 700; font-size: 25px; margin: 0 0 20px; }
+        h2 { font-family: 'Noto Serif KR', serif; font-weight: 700; font-size: 17px; margin: 0 0 14px; color: var(--accent-dark); }
+        .grid { display: grid; gap: 18px; }
+        .grid-3 { grid-template-columns: repeat(3, 1fr); }
+        .grid-2 { grid-template-columns: 2fr 1fr; }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+        }
+        .stat { text-align: center; }
+        .stat .num { font-size: 32px; font-weight: 700; color: var(--accent-dark); }
+        .stat .label { color: var(--muted); font-size: 13px; margin-top: 4px; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+        th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; }
+        tr:hover td { background: #faf8f5; }
+        a.row-link { color: var(--ink); text-decoration: none; }
+        a.row-link:hover { color: var(--accent-dark); text-decoration: underline; }
+        .tag {
+            display: inline-block;
+            background: #f1ece4;
+            color: var(--accent-dark);
+            padding: 3px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            margin: 2px 4px 2px 0;
+        }
+        .search-box { display: flex; gap: 8px; margin-bottom: 20px; }
+        .search-box input {
+            flex: 1;
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .search-box button {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 8px;
+            background: var(--accent);
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .muted { color: var(--muted); }
+        .section-title { margin-top: 28px; }
+        .badge-rating { color: var(--accent); font-weight: 700; font-family: 'IBM Plex Mono', monospace; }
+        .pager { margin-top: 16px; display: flex; gap: 10px; }
+        .pager a { color: var(--accent-dark); text-decoration: none; font-weight: 600; }
+        .mono { font-family: 'IBM Plex Mono', monospace; }
+
+        /* ---- compare screen ---- */
+        .compare-form select[multiple] { min-height: 120px; }
+        .compare-form .field { margin-bottom: 14px; }
+        .compare-form label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; font-weight: 600; }
+        .compare-form select {
+            width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px;
+            font-family: inherit; font-size: 14px; background: var(--bg);
+        }
+        .score-row-flex { display: flex; gap: 24px; align-items: center; }
+        .score-num { font-family: 'IBM Plex Mono', monospace; font-size: 36px; font-weight: 700; color: var(--accent-dark); }
+        .score-sub { color: var(--muted); font-size: 13px; }
+        .kw-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+        .kw-item {
+            display: flex; align-items: center; gap: 10px;
+            background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 11px 12px;
+        }
+        .kw-ic { font-size: 19px; flex-shrink: 0; }
+        .kw-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+        .kw-name { font-weight: 700; font-size: 12.5px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .kw-count { color: var(--accent-dark); font-size: 11.5px; font-weight: 600; font-family: 'IBM Plex Mono', monospace; }
+
+        /* ---- score card (donut + legend) ---- */
+        .score-side { flex: 1; display: flex; flex-direction: column; gap: 9px; }
+        .score-row { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
+        .sr-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+        .sr-dot.pos { background: var(--accent-dark); }
+        .sr-dot.neg { background: var(--rust); }
+        .sr-label { color: var(--muted); flex: 1; }
+        .sr-val { font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; font-weight: 700; }
+        .sr-val.pending { color: var(--muted); font-weight: 500; font-size: 11.5px; }
+        .score-note { font-size: 11px; color: var(--muted); line-height: 1.5; margin-top: 2px; padding-top: 9px; border-top: 1px dashed var(--border); }
+
+        /* ---- insight card ---- */
+        .insight-card-head { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 6px; }
+        .insight-ic { font-size: 17px; margin-top: 1px; }
+        .insight-title { font-size: 13.5px; font-weight: 700; }
+        .insight-sub { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+        .insight-item { padding: 12px 0; border-top: 1px dashed var(--border); }
+        .insight-quote { font-size: 13px; color: var(--ink); line-height: 1.55; font-style: italic; margin-bottom: 6px; }
+        .insight-action { font-size: 12px; color: var(--accent-dark); font-weight: 600; }
+
+        /* ---- review cards ---- */
+        .review-list { display: flex; flex-direction: column; gap: 10px; }
+        .review-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 14px 15px; }
+        .rc-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; flex-wrap: wrap; gap: 4px; }
+        .rc-rating { font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 700; color: var(--gold); }
+        .rc-rating.dim { color: var(--muted); font-size: 11px; font-weight: 600; }
+        .rc-meta { font-size: 10.5px; color: var(--muted); }
+        .rc-text { font-size: 12.5px; line-height: 1.6; color: var(--ink); margin-bottom: 8px; }
+        .rc-date { font-size: 10.5px; color: var(--muted); font-family: 'IBM Plex Mono', monospace; }
+        .load-more-btn {
+            width: 100%; padding: 12px; margin-top: 12px; border: 1px dashed var(--border); border-radius: 8px;
+            background: var(--card); color: var(--muted); font-size: 12.5px; font-weight: 600; cursor: pointer; text-align: center; display: block; text-decoration: none;
+        }
+        .peer-badge {
+            margin-top: 10px; padding: 9px 12px; background: #F1ECE4; color: var(--accent-dark);
+            border-radius: 6px; font-size: 13px; text-align: center; font-weight: 700;
+        }
+        .bar-row { margin-bottom: 12px; }
+        .bar-row-top { display: flex; justify-content: space-between; font-size: 12.5px; margin-bottom: 4px; }
+        .bar-row-top .nm { color: var(--muted); }
+        .bar-track { height: 8px; background: #F1ECE4; border-radius: 4px; overflow: hidden; }
+        .bar-fill { height: 100%; border-radius: 4px; }
+        .bar-fill.us { background: var(--accent-dark); }
+        .bar-fill.comp { background: #C9BFA6; }
+        .bar-fill.s0 { background: var(--accent-dark); }
+        .bar-fill.s1 { background: #A8462E; }
+        .bar-fill.s2 { background: #B98A2E; }
+        .bar-fill.s3 { background: #4A6FA5; }
+        .nm-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+        .nm-dot.s0 { background: var(--accent-dark); }
+        .nm-dot.s1 { background: #A8462E; }
+        .nm-dot.s2 { background: #B98A2E; }
+        .nm-dot.s3 { background: #4A6FA5; }
+        .rival-col-label { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); margin-right: 14px; }
+        .rival-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+        .badge { font-size: 10.5px; padding: 3px 9px; border-radius: 999px; font-weight: 700; }
+        .badge.ours { background: var(--accent-dark); color: #fff; }
+
+        /* ---- competitor rank cards ---- */
+        .compA-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 15px 16px; margin-bottom: 12px; }
+        .compA-head { display: flex; align-items: flex-start; gap: 11px; margin-bottom: 12px; }
+        .compA-badge {
+            width: 28px; height: 28px; border-radius: 50%; background: var(--ink); color: #fff;
+            font-family: 'IBM Plex Mono', monospace; font-weight: 700; font-size: 12.5px;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;
+        }
+        .compA-badge.s1 { background: #A8462E; }
+        .compA-badge.s2 { background: #B98A2E; }
+        .compA-badge.s3 { background: #4A6FA5; }
+        .compA-title { display: flex; flex-direction: column; gap: 3px; }
+        .compA-name { font-size: 13.5px; font-weight: 700; }
+        .compA-rating { font-size: 11.5px; color: var(--gold); font-weight: 600; }
+        .compA-count { color: var(--muted); font-weight: 500; }
+        .compA-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+        .tag-pill { font-size: 10.5px; padding: 4px 9px; border-radius: 999px; background: #F1ECE4; color: var(--muted); font-weight: 600; }
+        .compA-bar-row { display: grid; grid-template-columns: 62px 1fr 40px; align-items: center; gap: 10px; }
+        .compA-bar-row .cbr-label { font-size: 12px; color: var(--muted); }
+        .compA-bar-row .cbr-pct { font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; font-weight: 600; text-align: right; }
+
+        /* ---- leaflet marker badges ---- */
+        .map-badge {
+            width: 26px; height: 26px; border-radius: 50%; border: 2px solid #fff;
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'IBM Plex Mono', monospace; font-weight: 700; font-size: 11px; color: #fff;
+            box-shadow: 0 1px 4px rgba(36,29,20,0.3);
+        }
+        .map-badge.mine { width: 32px; height: 32px; background: var(--gold); color: var(--ink); font-size: 15px; }
+        .map-badge.s0 { background: var(--ink); }
+        .map-badge.s1 { background: #A8462E; }
+        .map-badge.s2 { background: #B98A2E; }
+        .map-badge.s3 { background: #4A6FA5; }
+
+        /* ---- donut ---- */
+        .donut-wrap { position: relative; width: 108px; height: 108px; flex-shrink: 0; }
+        .donut { width: 100%; height: 100%; border-radius: 50%; background: conic-gradient(var(--border) 0deg 360deg); }
+        .donut-hole {
+            position: absolute; inset: 12px; border-radius: 50%; background: var(--card);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .donut-num { font-family: 'IBM Plex Mono', monospace; font-size: 19px; font-weight: 700; color: var(--ink); }
+        .donut-num small { font-size: 10px; font-weight: 500; color: var(--muted); margin-left: 1px; }
+        .donut-sub { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+        /* ---- AI competitor comparison ---- */
+        .gap-summary-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 15px 16px; margin-bottom: 14px; }
+        .gap-summary-head { display: flex; align-items: center; gap: 9px; margin-bottom: 12px; }
+        .gap-summary-badge {
+            width: 24px; height: 24px; border-radius: 50%; background: var(--ink); color: #fff;
+            font-family: 'IBM Plex Mono', monospace; font-weight: 700; font-size: 11px;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .gap-summary-badge.s1 { background: #A8462E; }
+        .gap-summary-badge.s2 { background: #B98A2E; }
+        .gap-summary-badge.s3 { background: #4A6FA5; }
+        .gap-summary-name { font-weight: 700; font-size: 13.5px; }
+        .gap-block { padding: 10px 0; }
+        .gap-block:first-of-type { border-bottom: 1px dashed var(--border); }
+        .gap-label { font-size: 12px; font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+        .gap-label.strength { color: var(--accent-dark); }
+        .gap-label.diff { color: #8A5A16; }
+        .gap-text { font-size: 12.5px; line-height: 1.65; color: var(--muted); }
+
+        /* ---- competitor detail modal ---- */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(36,29,20,0.45);
+            display: flex; align-items: flex-end; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity .2s ease; z-index: 100;
+        }
+        .modal-overlay.open { opacity: 1; pointer-events: auto; }
+        .modal-sheet {
+            width: 100%; max-width: 560px; max-height: 88vh; overflow-y: auto;
+            background: var(--bg); border-radius: 16px 16px 0 0;
+            padding: 10px 22px 32px; position: relative;
+            transform: translateY(100%); transition: transform .25s ease;
+        }
+        .modal-overlay.open .modal-sheet { transform: translateY(0); }
+        .modal-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 6px auto 14px; }
+        .modal-close {
+            position: absolute; top: 14px; right: 18px; background: var(--card); border: 1px solid var(--border);
+            width: 30px; height: 30px; border-radius: 50%; font-size: 13px; color: var(--muted); cursor: pointer;
+        }
+        .md-head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; padding-right: 30px; }
+        .md-badge { width: 38px; height: 38px; border-radius: 50%; background: var(--ink); color: #fff;
+            font-family: 'IBM Plex Mono', monospace; font-weight: 700; font-size: 15px;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .md-badge.s1 { background: #A8462E; } .md-badge.s2 { background: #B98A2E; } .md-badge.s3 { background: #4A6FA5; }
+        .md-name { font-family: 'Noto Serif KR', serif; font-weight: 700; font-size: 17px; margin-bottom: 3px; }
+        .md-sub { font-size: 12px; color: var(--muted); }
+        .vs-strip { display: flex; align-items: center; background: var(--card); border: 1px solid var(--border);
+            border-radius: 8px; padding: 14px 10px; margin-bottom: 8px; }
+        .vs-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; text-align: center; }
+        .vs-label { font-size: 10.5px; color: var(--muted); font-weight: 600; }
+        .vs-val { font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 700; color: var(--ink); }
+        .vs-mid { font-family: 'Noto Serif KR', serif; font-weight: 900; font-size: 13px; color: var(--rust); padding: 0 12px; flex-shrink: 0; }
+        .vs-delta { text-align: center; font-size: 11px; color: var(--muted); margin-bottom: 18px; }
+        .md-section-label {
+            font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 1.2px; text-transform: uppercase;
+            color: var(--muted); margin: 18px 0 8px;
+        }
+        .md-intro { font-size: 12.5px; line-height: 1.65; color: var(--muted); }
+        .md-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0; font-size: 12.5px; border-bottom: 1px dashed var(--border); }
+        .md-row:last-child { border-bottom: none; }
+        .md-briefing { background: var(--ink); color: var(--bg); border-radius: 8px; padding: 13px 14px; font-size: 12.5px; line-height: 1.6; }
+
+        /* ---- market area ---- */
+        .area-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 18px; flex-wrap: wrap; gap: 4px; }
+        .area-loc { font-family: 'Noto Serif KR', serif; font-weight: 700; font-size: 16px; }
+        .area-quarter { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--muted); }
+        .opinion-card { background: var(--ink); color: var(--bg); border-radius: 8px; padding: 18px; margin-bottom: 22px; }
+        .oc-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 1px; color: #C9BFA6; margin-bottom: 8px; }
+        .opinion-card p { font-size: 13px; line-height: 1.65; }
+        .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 22px; }
+        .stat-mini { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 14px 14px; display: flex; flex-direction: column; gap: 4px; }
+        .sm-label { font-size: 11px; color: var(--muted); }
+        .sm-val { font-family: 'IBM Plex Mono', monospace; font-size: 19px; font-weight: 700; color: var(--ink); }
+        .sm-val small { font-size: 11px; font-weight: 500; color: var(--muted); margin-left: 1px; }
+        .sm-delta { font-size: 10px; font-weight: 600; margin-top: 2px; }
+        .sm-delta.up { color: var(--accent-dark); }
+        .sm-delta.down { color: var(--rust); }
+        .rank-row { display: flex; gap: 10px; margin-bottom: 22px; }
+        .rank-chip { flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px 8px; text-align: center; }
+        .rank-chip.gold { background: #FBF0D6; border-color: #E3C077; }
+        .rc-num { display: block; font-family: 'IBM Plex Mono', monospace; font-size: 18px; font-weight: 700; color: var(--ink); }
+        .rc-label { display: block; font-size: 10.5px; color: var(--muted); margin-top: 2px; }
+        .peak-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 16px; }
+        .peak-row { display: flex; gap: 12px; align-items: flex-start; padding: 9px 0; border-bottom: 1px dashed var(--border); }
+        .peak-row:last-child { border-bottom: none; }
+        .peak-ic { font-size: 16px; margin-top: 1px; }
+        .peak-title { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+        .peak-sub { font-size: 11.5px; color: var(--muted); line-height: 1.4; }
+        .facility-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; }
+        .facility-item { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; text-align: center; }
+        .facility-num { font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 700; }
+        .facility-label { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
+
+        /* ---- ranked list / trend charts (market area) ---- */
+        .rank-list-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 16px; }
+        .rank-list-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; }
+        .rl-medal {
+            width: 20px; height: 20px; border-radius: 50%; background: var(--bg); color: var(--muted);
+            font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; font-weight: 700;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .rl-medal.gold { background: var(--gold); color: #fff; }
+        .rl-label { width: 64px; font-size: 12px; color: var(--muted); flex-shrink: 0; }
+        .rl-track { flex: 1; height: 8px; background: var(--bg); border-radius: 4px; overflow: hidden; }
+        .rl-fill { height: 100%; background: var(--muted); border-radius: 4px; }
+        .rl-fill.gold { background: var(--gold); }
+        .rl-pct { width: 50px; text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; font-weight: 600; flex-shrink: 0; }
+
+        .mini-donut-row { display: flex; gap: 10px; margin-bottom: 16px; }
+        .mini-donut-item {
+            flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+            padding: 12px 8px; display: flex; flex-direction: column; align-items: center; gap: 8px;
+        }
+        .donut-wrap.sm { width: 68px; height: 68px; }
+        .donut-hole.sm { inset: 8px; }
+        .donut-num.sm { font-size: 13px; }
+        .mdi-label { font-size: 10px; color: var(--muted); text-align: center; }
+
+        .chip {
+            padding: 7px 14px; font-size: 12px; font-weight: 700; font-family: inherit;
+            border: 1.5px solid var(--border); border-radius: 999px; background: var(--bg); color: var(--muted);
+            cursor: pointer; transition: all .12s ease;
+        }
+        .chip:hover { border-color: var(--accent-dark); color: var(--accent-dark); }
+        .chip.sel { background: var(--accent-dark); border-color: var(--accent-dark); color: #fff; }
+        .metric-chips { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+        .trend-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 14px 14px 6px; margin-bottom: 18px; }
+        .trend-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; flex-wrap: wrap; gap: 4px; }
+        .trend-title { font-size: 12.5px; font-weight: 700; color: var(--accent-dark); }
+        .trend-legend { display: flex; gap: 14px; font-size: 10.5px; color: var(--muted); margin-bottom: 8px; }
+        .trend-legend span { display: flex; align-items: center; gap: 5px; }
+        .tl-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+        .line-svg { width: 100%; height: auto; display: block; }
+        .trend-line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+        .trend-dot { stroke: var(--card); stroke-width: 1.5; }
+        .line-val { font-family: 'IBM Plex Mono', monospace; font-size: 8.5px; fill: var(--muted); text-anchor: middle; }
+
+        .source-note {
+            font-size: 11.5px; color: var(--muted); background: var(--card); border: 1px solid var(--border);
+            padding: 12px 14px; border-radius: 8px; margin-top: 4px; line-height: 1.6;
+        }
+
+        /* ---- word cloud ---- */
+        .wordcloud-card { padding: 18px 16px; margin-bottom: 18px; }
+        .wc-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 1px; color: var(--muted); margin-bottom: 14px; }
+        .wc-cloud {
+            position: relative; height: 220px; width: 100%;
+            padding-bottom: 16px; border-bottom: 1px dashed var(--border); margin-bottom: 12px;
+            overflow: hidden;
+        }
+        .wc-w { position: absolute; font-family: 'Noto Serif KR', serif; font-weight: 700; line-height: 1; white-space: nowrap; }
+        .wc-note { font-size: 11.5px; color: var(--muted); line-height: 1.6; }
+        .wc-empty { font-size: 12.5px; color: var(--muted); padding: 20px 0; text-align: center; }
+    </style>
+</head>
+<body>
+<nav th:fragment="nav">
+    <span class="brand">단골장부 <small>Danggol Ledger</small></span>
+    <a href="/">홈</a>
+    <a href="/ledger">장부</a>
+    <a href="/compare">경쟁사 비교</a>
+    <a href="/marketing-chat">마케팅 챗봇</a>
+    <a href="/market">상권</a>
+    <span sec:authorize="isAuthenticated()" style="margin-left:auto; display:flex; align-items:center; gap:12px;">
+        <span sec:authentication="name" style="font-size:13px; opacity:0.85;"></span>
+        <a href="#" onclick="document.getElementById('logoutForm').submit(); return false;">로그아웃</a>
+        <form id="logoutForm" th:action="@{/logout}" method="post" style="display:none;"></form>
+    </span>
+    <a sec:authorize="isAnonymous()" href="/login" style="margin-left:auto;">로그인</a>
+    <a sec:authorize="isAnonymous()" href="/signup">회원가입</a>
+</nav>
+
+<div th:fragment="wordcloud(words, summary)" class="card wordcloud-card">
+    <h2 style="margin-bottom:2px;">자주 등장하는 단어</h2>
+    <div class="wc-label">리뷰 원문 기준 · 단순 태그 집계 아님</div>
+    <div class="wc-cloud" th:if="${!#lists.isEmpty(words)}">
+        <span class="wc-w" th:each="w : ${words}" th:text="${w.word}"
+              th:style="'top:' + ${w.topPercent} + '%; left:' + ${w.leftPercent} + '%; font-size:' + ${w.fontSizePx} + 'px; color:' + ${w.color} + '; transform:rotate(' + ${w.rotateDeg} + 'deg);'"></span>
+    </div>
+    <p class="wc-empty" th:if="${#lists.isEmpty(words)}">리뷰 원문이 아직 부족해요.</p>
+    <p class="wc-note" th:if="${!#lists.isEmpty(words) and summary != null}" th:text="${summary}"></p>
+    <p class="wc-note" th:if="${!#lists.isEmpty(words) and summary == null}">
+        태그 집계가 아니라 리뷰 원문에서 실제로 자주 쓰인 단어를 직접 센 결과예요. "AI로 분석하기"를 실행하면 이 단어들이 암시하는 매장 이미지를 AI가 한 문장으로 정리해드려요.
+    </p>
+</div>
+</body>
+</html>
