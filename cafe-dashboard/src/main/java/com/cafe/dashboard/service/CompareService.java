@@ -98,7 +98,7 @@ public class CompareService {
         long reviewCount = stat == null ? 0 : stat.getReviewCount();
 
         List<ReviewCategoryTag> topTags = tagRepository.findByIdStoreIdOrderByMentionCountDesc(storeId)
-                .stream().limit(4).toList();
+                .stream().limit(5).toList();
 
         List<AiBriefing> briefings = aiBriefingRepository.findByStoreIdOrderById(storeId);
         String briefing = briefings.isEmpty() ? null

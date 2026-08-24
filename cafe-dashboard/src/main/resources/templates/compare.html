@@ -90,7 +90,7 @@
         </div>
 
         <div class="card" style="margin-bottom:18px;">
-            <h2>우리 매장 강점 키워드 TOP 4</h2>
+            <h2>우리 매장 강점 키워드 TOP 5</h2>
             <div class="kw-grid">
                 <div class="kw-item" th:each="tag : ${result.mine().topTags()}">
                     <span class="kw-ic" th:text="${T(com.cafe.dashboard.util.TagIcons).iconFor(tag.id.tagText)}"></span>
@@ -193,24 +193,148 @@
         </div>
 
         <div class="card" style="margin-bottom:18px;" th:if="${!#lists.isEmpty(result.tagComparison())}">
-            <h2>강점 키워드 비교 <span class="badge ours" style="margin-left:8px;">우리 매장 기준 TOP 4</span></h2>
-            <div th:each="row : ${result.tagComparison()}" style="margin-bottom:20px;">
-                <div style="font-weight:700; font-size:13.5px; margin-bottom:10px;" th:text="${row.tagText}"></div>
-                <div class="bar-row" th:each="bar : ${row.bars}">
-                    <div class="bar-row-top">
-                        <span class="nm">
-                            <span class="nm-dot" th:classappend="'s' + ${bar.seriesIndex}"></span>
-                            <span th:text="${bar.storeName} + (${bar.mine} ? ' (우리)' : '')"></span>
-                        </span>
-                        <span th:text="${bar.count} + '건'"></span>
-                    </div>
-                    <div class="bar-track">
-                        <div class="bar-fill" th:classappend="'s' + ${bar.seriesIndex}"
-                             th:style="'width:' + ${bar.widthPercent} + '%'"></div>
-                    </div>
-                </div>
+            <h2>강점 키워드 비교 <span class="badge ours" style="margin-left:8px;">우리 매장 기준 TOP 5</span></h2>
+            <p class="muted" style="font-size:11.5px; margin:-4px 0 14px;">
+                각 키워드마다 비교 매장 중 최다 언급 건수를 100%로 놓고 상대 비율로 그렸어요. 정확한 건수는 매장 카드에서 확인하세요.
+            </p>
+            <div id="radarLegend" class="radar-legend" style="display:flex; gap:14px; flex-wrap:wrap; margin-bottom:14px; font-size:12px;">
+                <span th:each="bar, iter : ${result.tagComparison()[0].bars}"
+                      th:attr="data-series=${bar.seriesIndex}"
+                      style="display:flex; align-items:center; gap:6px; color:var(--muted); cursor:pointer; transition:opacity .15s;">
+                    <span class="nm-dot" th:classappend="'s' + ${bar.seriesIndex}"></span>
+                    <span th:text="${bar.storeName} + (${bar.mine} ? ' (우리)' : '')"></span>
+                </span>
+            </div>
+            <p class="muted" style="font-size:11px; margin:-8px 0 4px;">오각형 면(또는 위 범례)을 클릭하면 해당 매장이 강조돼요. 여러 매장을 눌러 동시에 강조할 수 있고, 다시 클릭하면 그 매장만 원래대로 돌아갑니다.</p>
+            <div style="position:relative; display:flex; justify-content:center;">
+                <svg id="tagRadar" width="320" height="300" viewBox="0 0 320 300"></svg>
+                <div id="radarTooltip" class="radar-tooltip"></div>
             </div>
         </div>
+
+        <style>
+            .radar-tooltip {
+                position:absolute; pointer-events:none; background:var(--ink); color:var(--bg);
+                font-size:11.5px; font-weight:600; padding:6px 10px; border-radius:6px;
+                white-space:nowrap; opacity:0; transition:opacity .08s ease; z-index:20;
+                transform:translate(-50%, -130%);
+            }
+            .radar-tooltip.show { opacity:1; }
+            .radar-poly { fill-opacity: 0.22; stroke-width: 2; stroke-linejoin: round; }
+            .radar-poly.s0 { stroke: var(--accent-dark); fill: var(--accent-dark); }
+            .radar-poly.s1 { stroke: #A8462E; fill: #A8462E; }
+            .radar-poly.s2 { stroke: #B98A2E; fill: #B98A2E; }
+            .radar-poly.s3 { stroke: #4A6FA5; fill: #4A6FA5; }
+            .radar-vtx { r: 3; stroke: var(--card); stroke-width: 1.5; }
+            .radar-hit { r: 9; fill: transparent; cursor: pointer; pointer-events: all; }
+            .radar-vtx.s0 { fill: var(--accent-dark); }
+            .radar-vtx.s1 { fill: #A8462E; }
+            .radar-vtx.s2 { fill: #B98A2E; }
+            .radar-vtx.s3 { fill: #4A6FA5; }
+            .radar-grid { fill: none; stroke: var(--border); stroke-width: 1; }
+            .radar-axis-label { font-family: 'Pretendard', sans-serif; font-size: 11.5px; fill: var(--ink); font-weight: 600; }
+        </style>
+
+        <script th:if="${!#lists.isEmpty(result.tagComparison())}" th:inline="javascript">
+            (function () {
+                const tagRows = /*[[${result.tagComparison()}]]*/ [];
+                const svg = document.getElementById('tagRadar');
+                const tooltip = document.getElementById('radarTooltip');
+                const cx = 160, cy = 150, maxR = 105;
+                const n = tagRows.length;
+                const seriesCount = tagRows[0].bars.length;
+
+                const NS = 'http://www.w3.org/2000/svg';
+                function el(tag, attrs) {
+                    const e = document.createElementNS(NS, tag);
+                    for (const k in attrs) e.setAttribute(k, attrs[k]);
+                    return e;
+                }
+                function point(i, pct) {
+                    const angle = -Math.PI / 2 + i * (2 * Math.PI / n);
+                    const r = (pct / 100) * maxR;
+                    return [cx + r * Math.cos(angle), cy + r * Math.sin(angle)];
+                }
+
+                [25, 50, 75, 100].forEach((pct) => {
+                    const pts = tagRows.map((_, i) => point(i, pct).join(',')).join(' ');
+                    svg.appendChild(el('polygon', { points: pts, class: 'radar-grid' }));
+                });
+
+                tagRows.forEach((row, i) => {
+                    const [x, y] = point(i, 100);
+                    svg.appendChild(el('line', { x1: cx, y1: cy, x2: x, y2: y, class: 'radar-grid' }));
+                    const angle = -Math.PI / 2 + i * (2 * Math.PI / n);
+                    const lx = cx + (maxR + 30) * Math.cos(angle);
+                    const ly = cy + (maxR + 16) * Math.sin(angle);
+                    const t = el('text', { x: lx, y: ly, class: 'radar-axis-label', 'text-anchor': 'middle', 'dominant-baseline': 'middle' });
+                    t.textContent = row.tagText;
+                    svg.appendChild(t);
+                });
+
+                function showTooltip(evt, text) {
+                    const wrap = svg.parentElement;
+                    const wrapRect = wrap.getBoundingClientRect();
+                    tooltip.textContent = text;
+                    tooltip.style.left = (evt.clientX - wrapRect.left) + 'px';
+                    tooltip.style.top = (evt.clientY - wrapRect.top) + 'px';
+                    tooltip.classList.add('show');
+                }
+                function hideTooltip() {
+                    tooltip.classList.remove('show');
+                }
+
+                const polysBySeries = [];
+                const dotsBySeries = [];
+                for (let s = 0; s < seriesCount; s++) { dotsBySeries.push([]); }
+
+                // Draw every series' fill polygon first so none of them end up layered
+                // on top of another series' hover targets (SVG paints in DOM order).
+                for (let s = 0; s < seriesCount; s++) {
+                    const pts = tagRows.map((row, i) => point(i, row.bars[s].widthPercent).join(',')).join(' ');
+                    const poly = el('polygon', { points: pts, class: 'radar-poly s' + s, style: 'cursor:pointer;' });
+                    poly.addEventListener('click', () => toggleHighlight(s));
+                    svg.appendChild(poly);
+                    polysBySeries.push(poly);
+                }
+
+                for (let s = 0; s < seriesCount; s++) {
+                    tagRows.forEach((row, i) => {
+                        const [x, y] = point(i, row.bars[s].widthPercent);
+                        const bar = row.bars[s];
+                        const label = bar.storeName + (bar.mine ? ' (우리)' : '') + ' · ' + row.tagText + ': ' + bar.count + '건';
+
+                        const hit = el('circle', { cx: x, cy: y, class: 'radar-hit' });
+                        hit.addEventListener('mouseenter', (e) => showTooltip(e, label));
+                        hit.addEventListener('mousemove', (e) => showTooltip(e, label));
+                        hit.addEventListener('mouseleave', hideTooltip);
+                        hit.addEventListener('click', () => toggleHighlight(s));
+                        svg.appendChild(hit);
+
+                        const dot = el('circle', { cx: x, cy: y, class: 'radar-vtx s' + s, style: 'pointer-events:none;' });
+                        svg.appendChild(dot);
+                        dotsBySeries[s].push(dot);
+                    });
+                }
+
+                const legendItems = Array.from(document.querySelectorAll('#radarLegend [data-series]'));
+                legendItems.forEach((li) => {
+                    const s = parseInt(li.getAttribute('data-series'), 10);
+                    li.addEventListener('click', () => toggleHighlight(s));
+                });
+
+                const selected = new Set();
+                function toggleHighlight(s) {
+                    if (selected.has(s)) selected.delete(s); else selected.add(s);
+                    for (let i = 0; i < seriesCount; i++) {
+                        const dim = selected.size > 0 && !selected.has(i);
+                        polysBySeries[i].style.opacity = dim ? '0.12' : '1';
+                        dotsBySeries[i].forEach((d) => { d.style.opacity = dim ? '0.15' : '1'; });
+                        if (legendItems[i]) legendItems[i].style.opacity = dim ? '0.35' : '1';
+                    }
+                }
+            })();
+        </script>
 
         <div class="card" th:if="${!#lists.isEmpty(result.mine().sampleReviews())}">
             <h2>실제 리뷰 <span class="rank-of muted" style="font-weight:400; font-size:12px;">(최근 <span th:text="${#lists.size(result.mine().sampleReviews())}"></span>건)</span></h2>
