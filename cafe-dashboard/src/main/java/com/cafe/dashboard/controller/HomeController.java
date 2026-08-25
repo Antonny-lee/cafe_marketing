@@ -1,10 +1,9 @@
 package com.cafe.dashboard.controller;
 
-import com.cafe.dashboard.entity.AppUser;
-import com.cafe.dashboard.repository.AppUserRepository;
 import com.cafe.dashboard.repository.StoreRepository;
-import com.cafe.dashboard.service.BusinessVerificationService;
+import com.cafe.dashboard.service.ActiveStoreResolver;
 import com.cafe.dashboard.service.LedgerService;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -15,20 +14,18 @@ import org.springframework.web.bind.annotation.GetMapping;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
-import java.util.Optional;
 
 @Controller
 @RequiredArgsConstructor
 public class HomeController {
 
     private final LedgerService ledgerService;
-    private final BusinessVerificationService businessVerificationService;
-    private final AppUserRepository appUserRepository;
+    private final ActiveStoreResolver activeStoreResolver;
     private final StoreRepository storeRepository;
 
     @GetMapping("/")
-    public String home(@AuthenticationPrincipal UserDetails principal, Model model) {
-        String storeId = myStoreId(principal).orElse(null);
+    public String home(@AuthenticationPrincipal UserDetails principal, HttpSession session, Model model) {
+        String storeId = activeStoreResolver.resolve(principal, session).orElse(null);
         if (storeId == null) {
             return "redirect:/biz-auth?needStore=1";
         }
@@ -41,20 +38,13 @@ public class HomeController {
     }
 
     @GetMapping("/my-store")
-    public String myStore(@AuthenticationPrincipal UserDetails principal, Model model) {
-        String storeId = myStoreId(principal).orElse(null);
+    public String myStore(@AuthenticationPrincipal UserDetails principal, HttpSession session, Model model) {
+        String storeId = activeStoreResolver.resolve(principal, session).orElse(null);
         if (storeId == null) {
             return "redirect:/biz-auth?needStore=1";
         }
 
         model.addAttribute("store", storeRepository.findById(storeId).orElseThrow());
         return "my-store";
-    }
-
-    private Optional<String> myStoreId(UserDetails principal) {
-        if (principal == null) return Optional.empty();
-        AppUser user = appUserRepository.findByEmail(principal.getUsername()).orElse(null);
-        if (user == null) return Optional.empty();
-        return businessVerificationService.getMyStoreId(user.getUserId());
     }
 }

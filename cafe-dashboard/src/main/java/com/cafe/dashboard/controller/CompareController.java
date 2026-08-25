@@ -1,11 +1,10 @@
 package com.cafe.dashboard.controller;
 
-import com.cafe.dashboard.entity.AppUser;
-import com.cafe.dashboard.repository.AppUserRepository;
-import com.cafe.dashboard.service.BusinessVerificationService;
+import com.cafe.dashboard.service.ActiveStoreResolver;
 import com.cafe.dashboard.service.CompareService;
 import com.cafe.dashboard.service.InsightService;
 import com.cafe.dashboard.service.WordCloudService;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -25,16 +24,15 @@ public class CompareController {
 
     private final CompareService compareService;
     private final InsightService insightService;
-    private final BusinessVerificationService businessVerificationService;
-    private final AppUserRepository appUserRepository;
+    private final ActiveStoreResolver activeStoreResolver;
     private final WordCloudService wordCloudService;
 
     @GetMapping("/compare")
-    public String form(@AuthenticationPrincipal UserDetails principal,
+    public String form(@AuthenticationPrincipal UserDetails principal, HttpSession session,
                         @RequestParam(required = false) List<String> rivals,
                         @RequestParam(required = false) String analyzeError,
                         Model model) {
-        Optional<String> mineId = myStoreId(principal);
+        Optional<String> mineId = activeStoreResolver.resolve(principal, session);
         if (mineId.isEmpty()) {
             return "redirect:/biz-auth?needStore=1";
         }
@@ -58,9 +56,10 @@ public class CompareController {
     }
 
     @PostMapping("/compare/analyze")
-    public String analyze(@AuthenticationPrincipal UserDetails principal,
+    public String analyze(@AuthenticationPrincipal UserDetails principal, HttpSession session,
                            @RequestParam(required = false) List<String> rivals) {
-        String mine = myStoreId(principal).orElseThrow(() -> new IllegalStateException("연결된 매장이 없습니다."));
+        String mine = activeStoreResolver.resolve(principal, session)
+                .orElseThrow(() -> new IllegalStateException("연결된 매장이 없습니다."));
         List<String> rivalIds = cleanRivals(mine, rivals);
         UriComponentsBuilder redirect = UriComponentsBuilder.fromPath("/compare");
         rivalIds.forEach(r -> redirect.queryParam("rivals", r));
@@ -79,12 +78,5 @@ public class CompareController {
                 .distinct()
                 .limit(3)
                 .toList();
-    }
-
-    private Optional<String> myStoreId(UserDetails principal) {
-        if (principal == null) return Optional.empty();
-        AppUser user = appUserRepository.findByEmail(principal.getUsername()).orElse(null);
-        if (user == null) return Optional.empty();
-        return businessVerificationService.getMyStoreId(user.getUserId());
     }
 }

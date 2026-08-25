@@ -14,28 +14,64 @@
                 style="padding:9px 18px; border:none; border-radius:8px; background:var(--accent-dark); color:#fff; font-weight:700; cursor:pointer;">
             최신 리뷰 · 태그 갱신
         </button>
-        <span id="refreshStatus" class="muted" style="font-size:12.5px;"></span>
+    </div>
+
+    <style>
+        .wait-modal-overlay {
+            position: fixed; inset: 0; background: rgba(36,29,20,0.55);
+            display: none; align-items: center; justify-content: center; z-index: 200;
+        }
+        .wait-modal-overlay.open { display: flex; }
+        .wait-modal-card {
+            background: var(--card); border-radius: 14px; padding: 34px 36px;
+            max-width: 340px; width: 90%; text-align: center; box-shadow: 0 10px 40px rgba(36,29,20,0.3);
+        }
+        .wait-spinner {
+            width: 38px; height: 38px; margin: 0 auto 18px;
+            border: 4px solid var(--border); border-top-color: var(--accent-dark);
+            border-radius: 50%; animation: wait-spin 0.8s linear infinite;
+        }
+        @keyframes wait-spin { to { transform: rotate(360deg); } }
+        .wait-modal-title { font-family:'Noto Serif KR', serif; font-weight:700; font-size:16px; margin-bottom:8px; }
+        .wait-modal-sub { font-size:12.5px; color:var(--muted); line-height:1.6; min-height:2.6em; }
+    </style>
+
+    <div id="refreshModal" class="wait-modal-overlay">
+        <div class="wait-modal-card">
+            <div class="wait-spinner"></div>
+            <div class="wait-modal-title">최신 리뷰 갱신 중이에요</div>
+            <div class="wait-modal-sub" id="refreshModalStatus">잠시만 기다려 주세요...</div>
+        </div>
     </div>
 
     <script th:inline="javascript">
         (function () {
             const btn = document.getElementById('refreshBtn');
-            const statusEl = document.getElementById('refreshStatus');
+            const modal = document.getElementById('refreshModal');
+            const modalStatus = document.getElementById('refreshModalStatus');
             const storeId = btn.dataset.storeId;
             let polling = null;
+            let pollCount = 0;
+            const runningMessages = [
+                '네이버 지도에서 최신 리뷰를 가져오고 있어요...',
+                '새 리뷰와 태그를 정리하고 있어요...',
+                '데이터베이스에 반영하고 있어요...'
+            ];
 
             function render(data) {
                 if (data.status === 'RUNNING') {
-                    const last = data.log.length ? data.log[data.log.length - 1] : '진행 중...';
-                    statusEl.textContent = '갱신 중... ' + last;
+                    modalStatus.textContent = runningMessages[Math.min(pollCount, runningMessages.length - 1)];
+                    pollCount++;
                 } else if (data.status === 'DONE') {
-                    statusEl.textContent = '완료 — 새 리뷰 ' + (data.newReviews ?? 0) + '건, 태그 ' + (data.tagRows ?? 0) + '건 반영됨. 새로고침하면 반영된 데이터가 보여요.';
+                    modalStatus.textContent = '완료 — 새 리뷰 ' + (data.newReviews ?? 0) + '건, 태그 ' + (data.tagRows ?? 0) + '건 반영됐어요.';
                     btn.disabled = false;
                     clearInterval(polling);
+                    setTimeout(() => location.reload(), 900);
                 } else if (data.status === 'ERROR') {
-                    statusEl.textContent = '갱신 실패: ' + (data.errorMessage || '알 수 없는 오류');
+                    modalStatus.textContent = '갱신에 실패했어요. 잠시 후 다시 시도해주세요.';
                     btn.disabled = false;
                     clearInterval(polling);
+                    setTimeout(() => modal.classList.remove('open'), 1600);
                 }
             }
 
@@ -49,7 +85,9 @@
 
             btn.addEventListener('click', async () => {
                 btn.disabled = true;
-                statusEl.textContent = '갱신 시작 중...';
+                pollCount = 0;
+                modal.classList.add('open');
+                modalStatus.textContent = '갱신 시작 중...';
                 const res = await fetch('/stores/' + storeId + '/refresh', { method: 'POST' });
                 render(await res.json());
                 polling = setInterval(poll, 2500);
@@ -111,10 +149,17 @@
 
     <div class="card section-title" th:if="${!#lists.isEmpty(detail.tags())}">
         <h2>리뷰 키워드</h2>
-        <div>
-            <span class="tag" th:each="tag : ${detail.tags()}"
-                  th:text="${tag.id.tagText} + ' (' + ${tag.mentionCount} + ')'">태그</span>
+        <div class="kw-cloud">
+            <span class="kw-chip" th:each="tag, iter : ${detail.tags()}" th:classappend="${iter.index < 3} ? 'kw-top' : ''">
+                <span th:text="${tag.id.tagText}">키워드</span>
+                <span class="kw-n" th:text="${tag.mentionCount}">0</span>
+            </span>
         </div>
+        <p class="muted" style="font-size:11px; margin-top:12px; margin-bottom:0; line-height:1.5;"
+           th:if="${detail.tags()[0].storeTotalParticipants != null}">
+            네이버 지도에 개업 이후 누적된 방문자 키워드 투표 기준이에요 (총 <span th:text="${detail.tags()[0].storeTotalParticipants}">0</span>명 응답).
+            위 리뷰 목록·워드클라우드는 최근 6개월치만 모은 것이라 두 숫자는 서로 다른 기준이에요.
+        </p>
     </div>
 
     <div class="section-title" th:replace="~{fragments/layout :: wordcloud(${wordCloud}, null)}"></div>

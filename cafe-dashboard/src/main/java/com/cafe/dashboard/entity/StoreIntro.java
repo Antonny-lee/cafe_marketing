@@ -14,7 +14,6 @@ public class StoreIntro {
     @Column(name = "store_id", length = 10)
     private String storeId;
 
-    @Lob
     @Column(name = "intro_text")
     private String introText;
 }

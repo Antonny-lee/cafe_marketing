@@ -1,18 +1,19 @@
-"""Creates the Oracle schema and loads every crawled Excel file + report.docx
-into it.
+"""Loads every crawled Excel file + report.docx into the Postgres (Supabase)
+schema. The schema itself is managed by create_tables_postgres.sql -- this
+script only clears and reloads the 9 tables it owns, it doesn't create them.
 
 Setup:
-    1. pip install oracledb python-dotenv openpyxl
-    2. cp .env.example .env   (fill in ORACLE_HOST/PORT/SERVICE_NAME/USER/PASSWORD)
-    3. python load_data.py
+    1. pip install psycopg2-binary python-dotenv openpyxl
+    2. Database/.env has PG_POOL_HOST/PORT/DATABASE/USER/PASSWORD filled in
+    3. Run create_tables_postgres.sql once (Supabase SQL Editor or psql)
+    4. python load_data.py
 """
 import os
 import re
-import sys
 import zipfile
 from datetime import date, datetime
 
-import oracledb
+import psycopg2
 from dotenv import load_dotenv
 from openpyxl import load_workbook
 
@@ -27,112 +28,27 @@ INFO_XLSX = os.path.join(BASE, "Info", "Info.xlsx")
 AI_BRIEFING_XLSX = os.path.join(BASE, "AIBriefing", "AIBriefing.xlsx")
 REPORT_DOCX = os.path.join(os.path.dirname(__file__), "..", "report.docx")
 
-DDL_STATEMENTS = [
-    "BEGIN EXECUTE IMMEDIATE 'DROP TABLE ai_briefing'; EXCEPTION WHEN OTHERS THEN NULL; END;",
-    "BEGIN EXECUTE IMMEDIATE 'DROP TABLE store_info_items'; EXCEPTION WHEN OTHERS THEN NULL; END;",
-    "BEGIN EXECUTE IMMEDIATE 'DROP TABLE store_intro'; EXCEPTION WHEN OTHERS THEN NULL; END;",
-    "BEGIN EXECUTE IMMEDIATE 'DROP TABLE review_category_tags'; EXCEPTION WHEN OTHERS THEN NULL; END;",
-    "BEGIN EXECUTE IMMEDIATE 'DROP TABLE reviews'; EXCEPTION WHEN OTHERS THEN NULL; END;",
-    "BEGIN EXECUTE IMMEDIATE 'DROP TABLE menu'; EXCEPTION WHEN OTHERS THEN NULL; END;",
-    "BEGIN EXECUTE IMMEDIATE 'DROP TABLE market_report_metric'; EXCEPTION WHEN OTHERS THEN NULL; END;",
-    "BEGIN EXECUTE IMMEDIATE 'DROP TABLE market_report'; EXCEPTION WHEN OTHERS THEN NULL; END;",
-    "BEGIN EXECUTE IMMEDIATE 'DROP TABLE stores'; EXCEPTION WHEN OTHERS THEN NULL; END;",
-    """CREATE TABLE stores (
-        store_id        VARCHAR2(10)   PRIMARY KEY,
-        name            VARCHAR2(200),
-        address         VARCHAR2(500),
-        subway_info     VARCHAR2(200),
-        business_hours  CLOB,
-        naver_id        VARCHAR2(20) UNIQUE,
-        lat             NUMBER(9,6),
-        lng             NUMBER(9,6)
-    )""",
-    """CREATE TABLE menu (
-        menu_id         VARCHAR2(10)   PRIMARY KEY,
-        store_id        VARCHAR2(10)   NOT NULL REFERENCES stores(store_id),
-        menu_name       VARCHAR2(300),
-        price_krw       NUMBER,
-        price_note      VARCHAR2(50)
-    )""",
-    "CREATE INDEX idx_menu_store ON menu(store_id)",
-    """CREATE TABLE reviews (
-        review_id         VARCHAR2(20)   PRIMARY KEY,
-        store_id          VARCHAR2(10)   NOT NULL REFERENCES stores(store_id),
-        reviewer_id       VARCHAR2(50),
-        rating            NUMBER(2,1),
-        visit_time        VARCHAR2(20),
-        wait_time         VARCHAR2(100),
-        tags              VARCHAR2(1000),
-        review_text       CLOB,
-        review_date_text  VARCHAR2(20),
-        review_date       DATE,
-        visit_count_text  VARCHAR2(30),
-        visit_count       NUMBER
-    )""",
-    "CREATE INDEX idx_reviews_store ON reviews(store_id)",
-    "CREATE INDEX idx_reviews_date ON reviews(review_date)",
-    """CREATE TABLE review_category_tags (
-        store_id                   VARCHAR2(10)  NOT NULL REFERENCES stores(store_id),
-        tag_text                   VARCHAR2(200) NOT NULL,
-        mention_count              NUMBER,
-        tag_category               VARCHAR2(50),
-        store_total_participants   NUMBER,
-        PRIMARY KEY (store_id, tag_text)
-    )""",
-    """CREATE TABLE store_intro (
-        store_id    VARCHAR2(10) PRIMARY KEY REFERENCES stores(store_id),
-        intro_text  CLOB
-    )""",
-    """CREATE TABLE store_info_items (
-        id          NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-        store_id    VARCHAR2(10)  NOT NULL REFERENCES stores(store_id),
-        section     VARCHAR2(50)  NOT NULL,
-        item_text   VARCHAR2(500),
-        detail      VARCHAR2(1000)
-    )""",
-    "CREATE INDEX idx_info_store ON store_info_items(store_id)",
-    "CREATE INDEX idx_info_section ON store_info_items(section)",
-    """CREATE TABLE ai_briefing (
-        id          NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-        store_id    VARCHAR2(10) NOT NULL REFERENCES stores(store_id),
-        sentence    VARCHAR2(1000)
-    )""",
-    "CREATE INDEX idx_briefing_store ON ai_briefing(store_id)",
-    """CREATE TABLE market_report (
-        report_id    NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-        location     VARCHAR2(300),
-        industry     VARCHAR2(100),
-        quarter      VARCHAR2(20),
-        report_date  DATE,
-        raw_text     CLOB
-    )""",
-    """CREATE TABLE market_report_metric (
-        id           NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-        report_id    NUMBER NOT NULL REFERENCES market_report(report_id),
-        metric_name  VARCHAR2(200),
-        value        VARCHAR2(300),
-        unit         VARCHAR2(50),
-        qoq_change   VARCHAR2(100),
-        yoy_change   VARCHAR2(100),
-        note         VARCHAR2(1000)
-    )""",
-    "CREATE INDEX idx_metric_report ON market_report_metric(report_id)",
+# Tables this script owns, in child-to-parent order so DELETE respects FKs.
+TABLES_TO_CLEAR = [
+    "ai_briefing", "store_info_items", "store_intro", "review_category_tags",
+    "reviews", "menu", "market_report_metric", "market_report", "stores",
 ]
 
 
 def connect():
-    dsn = oracledb.makedsn(
-        os.environ["ORACLE_HOST"],
-        int(os.environ.get("ORACLE_PORT", 1521)),
-        service_name=os.environ["ORACLE_SERVICE_NAME"],
+    return psycopg2.connect(
+        host=os.environ["PG_POOL_HOST"],
+        port=os.environ["PG_POOL_PORT"],
+        dbname=os.environ["PG_POOL_DATABASE"],
+        user=os.environ["PG_POOL_USER"],
+        password=os.environ["PG_POOL_PASSWORD"],
     )
-    return oracledb.connect(user=os.environ["ORACLE_USER"], password=os.environ["ORACLE_PASSWORD"], dsn=dsn)
 
 
-def create_schema(cur):
-    print("스키마 생성 중...")
-    for stmt in DDL_STATEMENTS:
-        cur.execute(stmt)
+def clear_tables(cur):
+    print("기존 데이터 비우는 중 (자식 테이블부터)...")
+    for table in TABLES_TO_CLEAR:
+        cur.execute(f"DELETE FROM {table}")
     print("완료.")
 
 
@@ -158,7 +74,7 @@ def load_stores(cur):
     ]
     cur.executemany(
         "INSERT INTO stores (store_id, name, address, subway_info, business_hours, naver_id, lat, lng) "
-        "VALUES (:1, :2, :3, :4, :5, :6, :7, :8)",
+        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
         data,
     )
     print(f"  {len(data)}건")
@@ -179,7 +95,7 @@ def load_menu(cur):
         price_krw, price_note = to_price(r["price_krw"])
         data.append((r["menu_id"], r["store_id"], r["menu_name"], price_krw, price_note))
     cur.executemany(
-        "INSERT INTO menu (menu_id, store_id, menu_name, price_krw, price_note) VALUES (:1, :2, :3, :4, :5)",
+        "INSERT INTO menu (menu_id, store_id, menu_name, price_krw, price_note) VALUES (%s, %s, %s, %s, %s)",
         data,
     )
     print(f"  {len(data)}건")
@@ -224,7 +140,7 @@ def load_reviews(cur):
     cur.executemany(
         "INSERT INTO reviews (review_id, store_id, reviewer_id, rating, visit_time, wait_time, "
         "tags, review_text, review_date_text, review_date, visit_count_text, visit_count) "
-        "VALUES (:1, :2, :3, :4, :5, :6, :7, :8, :9, :10, :11, :12)",
+        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
         data,
     )
     print(f"  {len(data)}건")
@@ -245,7 +161,7 @@ def load_review_category(cur):
     data = list(best.values())
     cur.executemany(
         "INSERT INTO review_category_tags (store_id, tag_text, mention_count, tag_category, "
-        "store_total_participants) VALUES (:1, :2, :3, :4, :5)",
+        "store_total_participants) VALUES (%s, %s, %s, %s, %s)",
         data,
     )
     print(f"  {len(data)}건 (중복 {dup_count}건 중 mention_count 낮은 쪽 제거)")
@@ -254,13 +170,13 @@ def load_review_category(cur):
 def load_info(cur):
     print("store_intro / store_info_items 적재 중...")
     intro = [(r["store_id"], r["intro_text"]) for r in rows(INFO_XLSX, sheet="소개")]
-    cur.executemany("INSERT INTO store_intro (store_id, intro_text) VALUES (:1, :2)", intro)
+    cur.executemany("INSERT INTO store_intro (store_id, intro_text) VALUES (%s, %s)", intro)
 
     item_count = 0
     for sheet in ["편의시설 및 서비스", "노키즈존", "반려동물 동반", "주차", "좌석.공간", "결제수단", "SNS"]:
         section_rows = [(r["store_id"], sheet, r["item_text"], r["detail"]) for r in rows(INFO_XLSX, sheet=sheet)]
         cur.executemany(
-            "INSERT INTO store_info_items (store_id, section, item_text, detail) VALUES (:1, :2, :3, :4)",
+            "INSERT INTO store_info_items (store_id, section, item_text, detail) VALUES (%s, %s, %s, %s)",
             section_rows,
         )
         item_count += len(section_rows)
@@ -270,7 +186,7 @@ def load_info(cur):
 def load_ai_briefing(cur):
     print("ai_briefing 적재 중...")
     data = [(r["store_id"], r["sentence"]) for r in rows(AI_BRIEFING_XLSX)]
-    cur.executemany("INSERT INTO ai_briefing (store_id, sentence) VALUES (:1, :2)", data)
+    cur.executemany("INSERT INTO ai_briefing (store_id, sentence) VALUES (%s, %s)", data)
     print(f"  {len(data)}건")
 
 
@@ -319,10 +235,10 @@ def load_market_report(cur):
 
     cur.execute(
         "INSERT INTO market_report (location, industry, quarter, report_date, raw_text) "
-        "VALUES (:1, :2, :3, :4, :5) RETURNING report_id INTO :6",
-        [location, industry, quarter, report_date, text, cur.var(int)],
+        "VALUES (%s, %s, %s, %s, %s) RETURNING report_id",
+        [location, industry, quarter, report_date, text],
     )
-    report_id = cur.bindvars[5].getvalue()[0]
+    report_id = cur.fetchone()[0]
 
     metrics = []
     for name, pattern, unit in METRIC_PATTERNS:
@@ -332,7 +248,7 @@ def load_market_report(cur):
     if metrics:
         cur.executemany(
             "INSERT INTO market_report_metric (report_id, metric_name, value, unit, qoq_change, "
-            "yoy_change, note) VALUES (:1, :2, :3, :4, :5, :6, :7)",
+            "yoy_change, note) VALUES (%s, %s, %s, %s, %s, %s, %s)",
             metrics,
         )
     print(f"  리포트 1건 (위치={location}, 업종={industry}, 분기={quarter}), 지표 {len(metrics)}건 추출")
@@ -342,7 +258,7 @@ def main():
     conn = connect()
     cur = conn.cursor()
     try:
-        create_schema(cur)
+        clear_tables(cur)
         conn.commit()
 
         load_stores(cur)

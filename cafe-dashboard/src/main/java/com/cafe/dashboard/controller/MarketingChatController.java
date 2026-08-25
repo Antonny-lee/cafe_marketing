@@ -1,9 +1,8 @@
 package com.cafe.dashboard.controller;
 
-import com.cafe.dashboard.entity.AppUser;
-import com.cafe.dashboard.repository.AppUserRepository;
-import com.cafe.dashboard.service.BusinessVerificationService;
+import com.cafe.dashboard.service.ActiveStoreResolver;
 import com.cafe.dashboard.service.MarketingChatService;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -24,16 +23,15 @@ import java.util.Optional;
 public class MarketingChatController {
 
     private final MarketingChatService marketingChatService;
-    private final BusinessVerificationService businessVerificationService;
-    private final AppUserRepository appUserRepository;
+    private final ActiveStoreResolver activeStoreResolver;
 
     public record AskRequest(String message, List<MarketingChatService.ChatTurn> history) {}
 
     public record AskResponse(String reply) {}
 
     @GetMapping("/marketing-chat")
-    public String page(@AuthenticationPrincipal UserDetails principal, Model model) {
-        Optional<String> storeId = businessVerificationService.getMyStoreId(currentUser(principal).getUserId());
+    public String page(@AuthenticationPrincipal UserDetails principal, HttpSession session, Model model) {
+        Optional<String> storeId = activeStoreResolver.resolve(principal, session);
         if (storeId.isEmpty()) {
             return "redirect:/biz-auth?needStore=1";
         }
@@ -42,15 +40,12 @@ public class MarketingChatController {
 
     @PostMapping("/marketing-chat/ask")
     @ResponseBody
-    public AskResponse ask(@AuthenticationPrincipal UserDetails principal, @RequestBody AskRequest request) {
-        String storeId = businessVerificationService.getMyStoreId(currentUser(principal).getUserId())
+    public AskResponse ask(@AuthenticationPrincipal UserDetails principal, HttpSession session,
+                            @RequestBody AskRequest request) {
+        String storeId = activeStoreResolver.resolve(principal, session)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT, "연결된 매장이 없습니다."));
         List<MarketingChatService.ChatTurn> history = request.history() == null ? List.of() : request.history();
         String reply = marketingChatService.ask(storeId, history, request.message());
         return new AskResponse(reply);
-    }
-
-    private AppUser currentUser(UserDetails principal) {
-        return appUserRepository.findByEmail(principal.getUsername()).orElseThrow();
     }
 }

@@ -4,7 +4,7 @@ were read directly off the chart images embedded in report.docx
 eye, not fabricated. See conversation history for which image maps to what."""
 import os
 
-import oracledb
+import psycopg2
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -31,12 +31,13 @@ BREAKDOWNS = [
 
 
 def connect():
-    dsn = oracledb.makedsn(
-        os.environ["ORACLE_HOST"],
-        int(os.environ.get("ORACLE_PORT", 1521)),
-        service_name=os.environ["ORACLE_SERVICE_NAME"],
+    return psycopg2.connect(
+        host=os.environ["PG_POOL_HOST"],
+        port=os.environ["PG_POOL_PORT"],
+        dbname=os.environ["PG_POOL_DATABASE"],
+        user=os.environ["PG_POOL_USER"],
+        password=os.environ["PG_POOL_PASSWORD"],
     )
-    return oracledb.connect(user=os.environ["ORACLE_USER"], password=os.environ["ORACLE_PASSWORD"], dsn=dsn)
 
 
 def main():
@@ -50,8 +51,8 @@ def main():
         return
     report_id = row[0]
 
-    cur.execute("DELETE FROM market_report_series WHERE report_id = :1", [report_id])
-    cur.execute("DELETE FROM market_report_breakdown WHERE report_id = :1", [report_id])
+    cur.execute("DELETE FROM market_report_series WHERE report_id = %s", [report_id])
+    cur.execute("DELETE FROM market_report_breakdown WHERE report_id = %s", [report_id])
 
     series_rows = []
     for metric, vals in SERIES.items():
@@ -61,7 +62,7 @@ def main():
             series_rows.append((report_id, metric, q, vals["mine"][i], gu, seoul))
     cur.executemany(
         "INSERT INTO market_report_series (report_id, metric_name, quarter_label, mine_value, gu_value, seoul_value) "
-        "VALUES (:1, :2, :3, :4, :5, :6)",
+        "VALUES (%s, %s, %s, %s, %s, %s)",
         series_rows,
     )
 
@@ -70,7 +71,7 @@ def main():
         for label, value in items:
             breakdown_rows.append((report_id, category, label, value))
     cur.executemany(
-        "INSERT INTO market_report_breakdown (report_id, category, label, value) VALUES (:1, :2, :3, :4)",
+        "INSERT INTO market_report_breakdown (report_id, category, label, value) VALUES (%s, %s, %s, %s)",
         breakdown_rows,
     )
 

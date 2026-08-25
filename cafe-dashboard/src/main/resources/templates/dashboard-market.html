@@ -30,8 +30,11 @@
         </div>
         <div class="card">
             <h2>가장 많이 언급된 태그 TOP 15</h2>
-            <div th:each="tag : ${overview.topTags()}">
-                <span class="tag" th:text="${tag.id.tagText} + ' (' + ${tag.mentionCount} + ')'">태그</span>
+            <div class="kw-cloud">
+                <span class="kw-chip" th:each="tag, iter : ${overview.topTags()}" th:classappend="${iter.index < 3} ? 'kw-top' : ''">
+                    <span th:text="${tag.id.tagText}">태그</span>
+                    <span class="kw-n" th:text="${tag.mentionCount}">0</span>
+                </span>
             </div>
         </div>
     </div>

@@ -23,7 +23,6 @@ public class Store {
     @Column(name = "subway_info", length = 200)
     private String subwayInfo;
 
-    @Lob
     @Column(name = "business_hours")
     private String businessHours;
 

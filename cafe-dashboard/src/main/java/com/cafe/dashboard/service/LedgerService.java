@@ -25,6 +25,8 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -52,7 +54,14 @@ public class LedgerService {
             Double yoyChangePercent,
             List<CategoryStat> categoryBreakdown,
             String lastUploadInfo
-    ) {}
+    ) {
+        private static final String[] CATEGORY_COLORS =
+                {"#3E4A2A", "#A8462E", "#4A6FA5", "#B98A2E", "#7A5C99", "#C2703D", "#6B6B6B"};
+
+        public String categoryColor(int index) {
+            return CATEGORY_COLORS[index % CATEGORY_COLORS.length];
+        }
+    }
 
     public record ImportResult(int rowsImported, LocalDate from, LocalDate to, long totalAmount) {}
 
@@ -60,10 +69,9 @@ public class LedgerService {
 
     public record HomeSummary(
             long todaySales,
+            long vsYesterdayAmount,
             Integer vsYesterdayPercent,
             int vsYesterdayAbsPercent,
-            Integer vsLastWeekPercent,
-            int vsLastWeekAbsPercent,
             String lastUploadInfo,
             long expenseCountThisMonth,
             long monthSales,
@@ -73,12 +81,10 @@ public class LedgerService {
             long netProfit,
             long thisMonthToDate,
             long lastMonthSameDayToDate,
-            int paceBarPercent,
             Double paceChangePercent,
             long projectedMonthSales,
-            long lastYearSameMonthToDate,
-            int yoyBarPercent,
-            Double yoyChangePercent
+            List<Long> thisMonthCumulative,
+            List<Long> lastMonthCumulative
     ) {}
 
     @Transactional
@@ -87,21 +93,17 @@ public class LedgerService {
 
         LocalDate today = LocalDate.now();
         LocalDate yesterday = today.minusDays(1);
-        LocalDate weekAgo = today.minusDays(7);
         LocalDate monthStart = today.withDayOfMonth(1);
         LocalDate lastMonthStart = monthStart.minusMonths(1);
+        LocalDate lastMonthEnd = lastMonthStart.withDayOfMonth(lastMonthStart.lengthOfMonth());
         LocalDate lastMonthSameDay = lastMonthStart.plusDays(Math.min(today.getDayOfMonth(), lastMonthStart.lengthOfMonth()) - 1L);
-        LocalDate lastYearMonthStart = monthStart.minusYears(1);
-        LocalDate lastYearSameDay = lastYearMonthStart.plusDays(Math.min(today.getDayOfMonth(), lastYearMonthStart.lengthOfMonth()) - 1L);
 
         long todaySales = dailySalesRepository.findByStoreIdAndSaleDate(storeId, today).map(DailySales::getAmount).orElse(0L);
         long yesterdaySales = dailySalesRepository.findByStoreIdAndSaleDate(storeId, yesterday).map(DailySales::getAmount).orElse(0L);
-        long weekAgoSales = dailySalesRepository.findByStoreIdAndSaleDate(storeId, weekAgo).map(DailySales::getAmount).orElse(0L);
 
+        long vsYesterdayAmount = todaySales - yesterdaySales;
         Integer vsYesterday = yesterdaySales == 0 ? null : (int) Math.round((todaySales - yesterdaySales) * 100.0 / yesterdaySales);
-        Integer vsLastWeek = weekAgoSales == 0 ? null : (int) Math.round((todaySales - weekAgoSales) * 100.0 / weekAgoSales);
         int vsYesterdayAbs = vsYesterday == null ? 0 : Math.abs(vsYesterday);
-        int vsLastWeekAbs = vsLastWeek == null ? 0 : Math.abs(vsLastWeek);
 
         long monthSales = dailySalesRepository.sumAmount(storeId, monthStart, today);
         long monthExpense = expenseRepository.sumAmount(storeId, monthStart, today);
@@ -115,12 +117,10 @@ public class LedgerService {
 
         long lastMonthToDate = dailySalesRepository.sumAmount(storeId, lastMonthStart, lastMonthSameDay);
         Double paceChange = lastMonthToDate == 0 ? null : Math.round((monthSales - lastMonthToDate) * 1000.0 / lastMonthToDate) / 10.0;
-        int paceBarPercent = barPercent(lastMonthToDate, monthSales);
         long projectedMonthSales = today.getDayOfMonth() == 0 ? 0 : monthSales * today.lengthOfMonth() / today.getDayOfMonth();
 
-        long lastYearToDate = dailySalesRepository.sumAmount(storeId, lastYearMonthStart, lastYearSameDay);
-        Double yoyChange = lastYearToDate == 0 ? null : Math.round((monthSales - lastYearToDate) * 1000.0 / lastYearToDate) / 10.0;
-        int yoyBarPercent = barPercent(lastYearToDate, monthSales);
+        List<Long> thisMonthCumulative = cumulativeDaily(storeId, monthStart, today);
+        List<Long> lastMonthCumulative = cumulativeDaily(storeId, lastMonthStart, lastMonthEnd);
 
         String lastUploadInfo = dailySalesRepository.findByStoreIdAndSaleDateBetweenOrderBySaleDateDesc(storeId, monthStart.minusMonths(2), today)
                 .stream()
@@ -129,18 +129,26 @@ public class LedgerService {
                 .map(d -> d.getSaleDate().toString())
                 .orElse(null);
 
-        return new HomeSummary(todaySales, vsYesterday, vsYesterdayAbs, vsLastWeek, vsLastWeekAbs,
+        return new HomeSummary(todaySales, vsYesterdayAmount, vsYesterday, vsYesterdayAbs,
                 lastUploadInfo, expenseCount,
                 monthSales, materialCost, rentCost, otherCost, netProfit,
-                monthSales, lastMonthToDate, paceBarPercent, paceChange, projectedMonthSales,
-                lastYearToDate, yoyBarPercent, yoyChange);
+                monthSales, lastMonthToDate, paceChange, projectedMonthSales,
+                thisMonthCumulative, lastMonthCumulative);
     }
 
-    /** Bar width for `other` relative to `reference`, capped at 100 so the reference bar (100%) is never exceeded visually. */
-    private int barPercent(long other, long reference) {
-        long max = Math.max(other, reference);
-        if (max == 0) return 0;
-        return (int) Math.min(100, Math.round(100.0 * other / max));
+    /** Running daily total for each day in [from, to], inclusive - missing days just carry the prior total forward. */
+    private List<Long> cumulativeDaily(String storeId, LocalDate from, LocalDate to) {
+        Map<LocalDate, Long> byDate = dailySalesRepository.findByStoreIdAndSaleDateBetweenOrderBySaleDateDesc(storeId, from, to)
+                .stream()
+                .collect(Collectors.toMap(DailySales::getSaleDate, DailySales::getAmount));
+
+        List<Long> result = new ArrayList<>();
+        long running = 0;
+        for (LocalDate d = from; !d.isAfter(to); d = d.plusDays(1)) {
+            running += byDate.getOrDefault(d, 0L);
+            result.add(running);
+        }
+        return result;
     }
 
     public List<MonthSummary> monthlyComparison(String storeId, int monthsBack) {
@@ -340,6 +348,34 @@ public class LedgerService {
 
     public List<FixedCost> listFixedCosts(String storeId) {
         return fixedCostRepository.findByStoreIdAndActiveOrderByDayOfMonth(storeId, "Y");
+    }
+
+    @Transactional
+    public void updateFixedCost(String storeId, Long id, String category, String vendor, long amount,
+                                 String paymentMethod, int dayOfMonth, String memo) {
+        FixedCost fixedCost = fixedCostRepository.findById(id)
+                .filter(fc -> fc.getStoreId().equals(storeId))
+                .orElseThrow(() -> new IllegalArgumentException("본인 매장의 고정비만 수정할 수 있습니다."));
+        fixedCost.setCategory(category);
+        fixedCost.setVendor(vendor);
+        fixedCost.setAmount(amount);
+        fixedCost.setPaymentMethod(paymentMethod);
+        fixedCost.setDayOfMonth(dayOfMonth);
+        fixedCost.setMemo(memo);
+        fixedCostRepository.save(fixedCost);
+
+        // The current month's auto-posted expense (see ensureFixedCostsPosted) was created from the
+        // old values before this edit - without this, edits wouldn't show up until next month's posting.
+        LocalDate today = LocalDate.now();
+        LocalDate monthStart = today.withDayOfMonth(1);
+        for (Expense expense : expenseRepository.findByFixedCostIdAndExpenseDateBetween(id, monthStart, today)) {
+            expense.setCategory(category);
+            expense.setVendor(vendor);
+            expense.setAmount(amount);
+            expense.setPaymentMethod(paymentMethod);
+            expense.setMemo(memo);
+            expenseRepository.save(expense);
+        }
     }
 
     public Page<Expense> listExpenses(String storeId, int page) {

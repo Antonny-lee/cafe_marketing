@@ -51,6 +51,19 @@
         .li-vendor { font-weight:400; color:var(--muted); font-size:11.5px; }
         .li-date { font-size:11px; color:var(--muted); font-family:'IBM Plex Mono', monospace; }
         .li-amt { font-family:'IBM Plex Mono', monospace; font-weight:600; font-size:14px; color:var(--rust); }
+        .fc-row { cursor:pointer; }
+        .fc-row:hover { background:#faf8f5; }
+        .fc-edit-form { padding:14px 10px; margin-bottom:6px; background:#faf8f5; border-radius:0 0 8px 8px; border-bottom:1px solid var(--border); }
+        .expense-donut-wrap { position:relative; width:280px; height:280px; margin:0 auto 20px; }
+        .expense-donut-wrap svg { width:100%; height:100%; }
+        .expense-donut-arc { cursor:pointer; transition:opacity .1s ease; }
+        .expense-donut-hole {
+            position:absolute; inset:65px; border-radius:50%; background:var(--card);
+            display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none;
+            gap:5px;
+        }
+        .expense-donut-num { font-family:'IBM Plex Mono', monospace; font-size:26px; font-weight:700; color:var(--ink); }
+        .expense-donut-sub { font-size:13px; color:var(--muted); }
         .pay-tag { display:inline-block; margin-left:6px; padding:1px 7px; border-radius:999px; background:#f1ece4; font-size:9.5px; font-weight:600; color:var(--muted); }
         .upload-row { display:flex; gap:8px; align-items:center; }
         .upload-row input[type=file] { flex:1; font-size:12.5px; }
@@ -68,6 +81,13 @@
         .daily-amt { font-family:'IBM Plex Mono', monospace; font-weight:600; font-size:13.5px; }
         .daily-src { font-size:9.5px; padding:1px 7px; border-radius:999px; background:#f1ece4; color:var(--muted); margin-left:6px; }
         .daily-del { border:none; background:none; color:var(--rust); font-size:12px; cursor:pointer; padding:4px 6px; }
+        .daily-row-extra { display:none; }
+        #dailySalesList.expanded .daily-row-extra { display:flex; }
+        .daily-toggle-btn {
+            width:100%; margin-top:10px; padding:10px; border:1px dashed var(--border); border-radius:8px;
+            background:none; color:var(--muted); font-size:12.5px; font-weight:600; cursor:pointer;
+        }
+        .daily-toggle-btn:hover { border-color:var(--accent-dark); color:var(--accent-dark); }
     </style>
 
     <div class="pl-strip">
@@ -137,30 +157,101 @@
         <div class="card" style="margin-bottom:20px;">
             <h2>이번 달 일별 매출 내역</h2>
             <p class="muted" style="font-size:12.5px;" th:if="${#lists.isEmpty(dailySales)}">아직 등록된 매출이 없어요.</p>
-            <div th:each="d : ${dailySales}" class="daily-row">
-                <div>
-                    <span class="daily-date" th:text="${#temporals.format(d.saleDate, 'MM.dd')}"></span>
-                    <span class="daily-src" th:text="${d.source == 'UPLOAD'} ? '업로드' : '수동'"></span>
-                </div>
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <span class="daily-amt" th:text="${#numbers.formatInteger(d.amount,1,'COMMA')} + '원'"></span>
-                    <form method="post" th:action="@{'/ledger/sales/' + ${d.saleDate} + '/delete'}"
-                          onsubmit="return confirm('이 날짜 매출 기록을 삭제할까요?')">
-                        <button type="submit" class="daily-del">삭제</button>
-                    </form>
+            <div id="dailySalesList">
+                <div th:each="d, iter : ${dailySales}" class="daily-row" th:classappend="${iter.index >= 5} ? 'daily-row-extra' : ''">
+                    <div>
+                        <span class="daily-date" th:text="${#temporals.format(d.saleDate, 'MM.dd')}"></span>
+                        <span class="daily-src" th:text="${d.source == 'UPLOAD'} ? '업로드' : '수동'"></span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span class="daily-amt" th:text="${#numbers.formatInteger(d.amount,1,'COMMA')} + '원'"></span>
+                        <form method="post" th:action="@{'/ledger/sales/' + ${d.saleDate} + '/delete'}"
+                              onsubmit="return confirm('이 날짜 매출 기록을 삭제할까요?')">
+                            <button type="submit" class="daily-del">삭제</button>
+                        </form>
+                    </div>
                 </div>
             </div>
+            <button type="button" id="dailySalesToggle" class="daily-toggle-btn" th:if="${#lists.size(dailySales) > 5}"
+                    th:text="'전체 보기 (' + ${#lists.size(dailySales)} + '건)'"
+                    onclick="document.getElementById('dailySalesList').classList.add('expanded'); this.remove();"></button>
         </div>
 
         <div class="card">
             <h2>이번 달 지출 비중</h2>
             <p class="muted" style="font-size:12.5px;" th:if="${#lists.isEmpty(overview.categoryBreakdown())}">아직 등록된 지출이 없어요.</p>
-            <div th:each="stat : ${overview.categoryBreakdown()}" class="bar-row">
-                <div class="bar-row-top">
-                    <span class="nm" th:text="${stat.category}">카테고리</span>
-                    <span th:text="${#numbers.formatInteger(stat.amount(),1,'COMMA')} + '원 (' + ${stat.percent()} + '%)'"></span>
+            <div th:if="${!#lists.isEmpty(overview.categoryBreakdown())}">
+                <div class="expense-donut-wrap">
+                    <svg id="expenseDonutSvg" viewBox="0 0 200 200"></svg>
+                    <div class="expense-donut-hole">
+                        <span class="expense-donut-num" th:text="${#numbers.formatInteger(overview.monthExpense(),1,'COMMA')}"></span>
+                        <span class="expense-donut-sub">이번 달 지출</span>
+                    </div>
+                    <div id="expenseDonutTooltip" class="chart-tooltip"></div>
                 </div>
-                <div class="bar-track"><div class="bar-fill us" th:style="'width:' + ${stat.percent()} + '%'"></div></div>
+                <table>
+                    <thead><tr><th>항목</th><th style="text-align:right;">금액</th><th style="text-align:right;">비중</th></tr></thead>
+                    <tbody>
+                    <tr th:each="stat, iter : ${overview.categoryBreakdown()}">
+                        <td>
+                            <span class="nm-dot" th:style="'background:' + ${overview.categoryColor(iter.index)}"></span>
+                            <span th:text="${stat.category}">카테고리</span>
+                        </td>
+                        <td class="mono" style="text-align:right;" th:text="${#numbers.formatInteger(stat.amount(),1,'COMMA')} + '원'"></td>
+                        <td class="mono" style="text-align:right;" th:text="${stat.percent()} + '%'"></td>
+                    </tr>
+                    </tbody>
+                </table>
+
+                <script th:inline="javascript">
+                    (function () {
+                        const stats = /*[[${overview.categoryBreakdown()}]]*/ [];
+                        const svg = document.getElementById('expenseDonutSvg');
+                        const tooltip = document.getElementById('expenseDonutTooltip');
+                        if (!svg || !stats.length) return;
+
+                        const colors = ['#3E4A2A', '#A8462E', '#4A6FA5', '#B98A2E', '#7A5C99', '#C2703D', '#6B6B6B'];
+                        const total = stats.reduce((s, c) => s + c.amount, 0);
+                        if (total <= 0) return;
+
+                        const cx = 100, cy = 100, r = 70, strokeWidth = 18;
+                        const circumference = 2 * Math.PI * r;
+                        const gapLen = stats.length > 1 ? (2.5 / 360) * circumference : 0;
+
+                        let cursorLen = 0, content = '';
+                        stats.forEach((s, i) => {
+                            const fraction = s.amount / total;
+                            const arcLen = Math.max(0, fraction * circumference - gapLen);
+                            const color = colors[i % colors.length];
+                            content += '<circle class="expense-donut-arc" cx="' + cx + '" cy="' + cy + '" r="' + r + '" ' +
+                                'fill="none" stroke="' + color + '" stroke-width="' + strokeWidth + '" ' +
+                                'stroke-dasharray="' + arcLen + ' ' + (circumference - arcLen) + '" ' +
+                                'stroke-dashoffset="' + (-cursorLen) + '" ' +
+                                'data-category="' + s.category + '" data-amount="' + s.amount + '" data-percent="' + s.percent + '"/>';
+                            cursorLen += fraction * circumference;
+                        });
+
+                        svg.innerHTML = content;
+                        svg.style.transform = 'rotate(-90deg)';
+
+                        const wrap = svg.parentElement;
+                        svg.querySelectorAll('.expense-donut-arc').forEach(arc => {
+                            arc.addEventListener('mousemove', (e) => {
+                                arc.style.opacity = 0.82;
+                                const rect = wrap.getBoundingClientRect();
+                                tooltip.innerHTML = '<b>' + arc.dataset.category + '</b><br>' +
+                                    Number(arc.dataset.amount).toLocaleString() + '원 (' + arc.dataset.percent + '%)';
+                                tooltip.classList.add('show');
+                                tooltip.style.left = (e.clientX - rect.left) + 'px';
+                                tooltip.style.top = (e.clientY - rect.top) + 'px';
+                            });
+                            arc.addEventListener('mouseleave', () => {
+                                arc.style.opacity = 1;
+                                tooltip.classList.remove('show');
+                            });
+                        });
+                    })();
+                </script>
             </div>
         </div>
     </div>
@@ -216,16 +307,66 @@
         <div class="card">
             <h2>등록된 고정비</h2>
             <p class="muted" style="font-size:12.5px;" th:if="${#lists.isEmpty(fixedCosts)}">등록된 고정비가 없어요.</p>
-            <div th:each="fc : ${fixedCosts}" class="ledger-item">
-                <div>
-                    <span class="li-cat" th:text="${fc.category}">카테고리</span>
-                    <span class="li-vendor" th:if="${fc.vendor != null}" th:text="' · ' + ${fc.vendor}"></span><br/>
-                    <span class="li-date" th:text="'매달 ' + ${fc.dayOfMonth} + '일 자동 등록'"></span>
+            <div th:each="fc, iter : ${fixedCosts}">
+                <div class="ledger-item fc-row" th:attr="onclick=|toggleFcEdit(${iter.index})|">
+                    <div>
+                        <span class="li-cat" th:text="${fc.category}">카테고리</span>
+                        <span class="li-vendor" th:if="${fc.vendor != null}" th:text="' · ' + ${fc.vendor}"></span><br/>
+                        <span class="li-date" th:text="'매달 ' + ${fc.dayOfMonth} + '일 자동 등록'"></span>
+                    </div>
+                    <span class="li-amt" th:text="'− ' + ${#numbers.formatInteger(fc.amount,1,'COMMA')}"></span>
                 </div>
-                <span class="li-amt" th:text="'− ' + ${#numbers.formatInteger(fc.amount,1,'COMMA')}"></span>
+
+                <form th:id="'fcEditForm' + ${iter.index}" class="fc-edit-form" method="post"
+                      th:action="@{'/ledger/fixed-costs/' + ${fc.id}}" style="display:none;">
+                    <div class="field">
+                        <label>카테고리</label>
+                        <select name="category" required>
+                            <option value="재료 구입" th:selected="${fc.category == '재료 구입'}">재료 구입</option>
+                            <option value="임대료" th:selected="${fc.category == '임대료'}">임대료</option>
+                            <option value="인건비" th:selected="${fc.category == '인건비'}">인건비</option>
+                            <option value="공과금" th:selected="${fc.category == '공과금'}">공과금</option>
+                            <option value="카드수수료" th:selected="${fc.category == '카드수수료'}">카드수수료</option>
+                            <option value="세금" th:selected="${fc.category == '세금'}">세금</option>
+                            <option value="기타" th:selected="${fc.category == '기타'}">기타</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label>거래처 (선택)</label>
+                        <input type="text" name="vendor" th:value="${fc.vendor}"/>
+                    </div>
+                    <div class="field">
+                        <label>금액 (원)</label>
+                        <input type="number" name="amount" th:value="${fc.amount}" required/>
+                    </div>
+                    <div class="field">
+                        <label>매달 며칠에 자동 등록할지</label>
+                        <input type="number" name="dayOfMonth" min="1" max="31" th:value="${fc.dayOfMonth}" required/>
+                    </div>
+                    <div class="field">
+                        <label>결제수단</label>
+                        <select name="paymentMethod" required>
+                            <option value="카드" th:selected="${fc.paymentMethod == '카드'}">카드</option>
+                            <option value="현금" th:selected="${fc.paymentMethod == '현금'}">현금</option>
+                            <option value="계좌이체" th:selected="${fc.paymentMethod == '계좌이체'}">계좌이체</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label>메모 (선택)</label>
+                        <input type="text" name="memo" th:value="${fc.memo}"/>
+                    </div>
+                    <button type="submit" class="submit-btn">수정 저장</button>
+                </form>
             </div>
         </div>
     </div>
+
+    <script>
+        function toggleFcEdit(i) {
+            const el = document.getElementById('fcEditForm' + i);
+            if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+        }
+    </script>
 
     <!-- ===== 내역 ===== -->
     <div th:if="${view == 'history'}">

@@ -6,7 +6,7 @@ import os
 import re
 import zipfile
 
-import oracledb
+import psycopg2
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -78,12 +78,13 @@ FACILITY_PATTERN = re.compile(
 
 
 def connect():
-    dsn = oracledb.makedsn(
-        os.environ["ORACLE_HOST"],
-        int(os.environ.get("ORACLE_PORT", 1521)),
-        service_name=os.environ["ORACLE_SERVICE_NAME"],
+    return psycopg2.connect(
+        host=os.environ["PG_POOL_HOST"],
+        port=os.environ["PG_POOL_PORT"],
+        dbname=os.environ["PG_POOL_DATABASE"],
+        user=os.environ["PG_POOL_USER"],
+        password=os.environ["PG_POOL_PASSWORD"],
     )
-    return oracledb.connect(user=os.environ["ORACLE_USER"], password=os.environ["ORACLE_PASSWORD"], dsn=dsn)
 
 
 def main():
@@ -100,9 +101,9 @@ def main():
         return
     report_id = row[0]
 
-    cur.execute("UPDATE market_report SET opinion_text = :1 WHERE report_id = :2", [opinion, report_id])
+    cur.execute("UPDATE market_report SET opinion_text = %s WHERE report_id = %s", [opinion, report_id])
 
-    cur.execute("DELETE FROM market_report_metric WHERE report_id = :1", [report_id])
+    cur.execute("DELETE FROM market_report_metric WHERE report_id = %s", [report_id])
 
     metrics = []
     for name, pattern, unit, qoq_pat, yoy_pat in METRIC_PATTERNS:
@@ -134,7 +135,7 @@ def main():
 
     cur.executemany(
         "INSERT INTO market_report_metric (report_id, metric_name, value, unit, qoq_change, yoy_change, note) "
-        "VALUES (:1, :2, :3, :4, :5, :6, :7)",
+        "VALUES (%s, %s, %s, %s, %s, %s, %s)",
         metrics,
     )
     conn.commit()

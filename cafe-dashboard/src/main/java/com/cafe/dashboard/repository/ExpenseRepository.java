@@ -19,6 +19,8 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
 
     boolean existsByFixedCostIdAndExpenseDateBetween(Long fixedCostId, LocalDate from, LocalDate to);
 
+    List<Expense> findByFixedCostIdAndExpenseDateBetween(Long fixedCostId, LocalDate from, LocalDate to);
+
     @Query("SELECT COALESCE(SUM(e.amount), 0) FROM Expense e " +
            "WHERE e.storeId = :storeId AND e.expenseDate BETWEEN :from AND :to")
     long sumAmount(String storeId, LocalDate from, LocalDate to);

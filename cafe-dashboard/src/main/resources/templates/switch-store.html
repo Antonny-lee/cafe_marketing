@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('매장 선택')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: nav}"></nav>
+<main>
+    <style>
+        .store-switch-item {
+            display:block; width:100%; text-align:left; font-family:inherit; cursor:pointer;
+            margin-bottom:12px; padding:16px 18px;
+        }
+        .store-switch-item.active { border-color:var(--accent-dark); background:#F1ECE4; }
+        .store-switch-row { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+        .store-switch-name { font-weight:700; font-size:14px; }
+        .store-switch-meta { color:var(--muted); font-size:12px; margin-top:3px; }
+    </style>
+
+    <h1>매장 선택</h1>
+    <p class="muted" style="margin-bottom:20px;">인증해둔 사업자 중 지금부터 볼 매장을 선택하세요. 홈/장부/경쟁사 비교/마케팅 챗봇이 선택한 매장 기준으로 바뀝니다.</p>
+
+    <div class="card" th:if="${#lists.isEmpty(businesses)}">
+        <p class="muted" style="margin-bottom:10px;">아직 매장에 연결된 인증 사업자가 없어요.</p>
+        <a href="/biz-auth" class="row-link" style="font-weight:700;">사업자 인증하러 가기 →</a>
+    </div>
+
+    <form th:each="b : ${businesses}" method="post" th:action="@{/switch-store}">
+        <input type="hidden" name="storeId" th:value="${b.storeId}"/>
+        <button type="submit" class="card store-switch-item" th:classappend="${b.storeId == activeStoreId} ? 'active' : ''">
+            <div class="store-switch-row">
+                <div>
+                    <div class="store-switch-name"
+                         th:text="${storeNames.get(b.storeId) != null ? storeNames.get(b.storeId) : b.bizName}">매장명</div>
+                    <div class="store-switch-meta" th:text="${b.bizName} + ' · ' + ${b.bizRegNo}"></div>
+                </div>
+                <span class="tag" th:if="${b.storeId == activeStoreId}">✓ 현재 보는 중</span>
+            </div>
+        </button>
+    </form>
+
+    <a href="/biz-auth" class="row-link" style="display:inline-block; margin-top:8px; font-size:13px; font-weight:600;">
+        + 다른 매장 사업자 인증하기
+    </a>
+</main>
+</body>
+</html>

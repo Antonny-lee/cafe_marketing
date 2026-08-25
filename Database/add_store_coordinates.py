@@ -2,7 +2,7 @@
 lat/lng columns add_coordinates.py added to cafes.xlsx."""
 import os
 
-import oracledb
+import psycopg2
 from dotenv import load_dotenv
 from openpyxl import load_workbook
 
@@ -12,26 +12,24 @@ CAFES_XLSX = os.path.join(os.path.dirname(__file__), "..", "Web crawling", "Home
 
 
 def connect():
-    dsn = oracledb.makedsn(
-        os.environ["ORACLE_HOST"],
-        int(os.environ.get("ORACLE_PORT", 1521)),
-        service_name=os.environ["ORACLE_SERVICE_NAME"],
+    return psycopg2.connect(
+        host=os.environ["PG_POOL_HOST"],
+        port=os.environ["PG_POOL_PORT"],
+        dbname=os.environ["PG_POOL_DATABASE"],
+        user=os.environ["PG_POOL_USER"],
+        password=os.environ["PG_POOL_PASSWORD"],
     )
-    return oracledb.connect(user=os.environ["ORACLE_USER"], password=os.environ["ORACLE_PASSWORD"], dsn=dsn)
 
 
 def main():
     conn = connect()
     cur = conn.cursor()
 
-    try:
-        cur.execute("ALTER TABLE stores ADD (lat NUMBER(9,6), lng NUMBER(9,6))")
-        print("lat/lng 컬럼 추가됨.")
-    except oracledb.DatabaseError as e:
-        if "ORA-01430" in str(e):
-            print("lat/lng 컬럼이 이미 있음, 건너뜀.")
-        else:
-            raise
+    # create_tables_postgres.sql already defines lat/lng, but IF NOT EXISTS keeps
+    # this script safe to run standalone too.
+    cur.execute("ALTER TABLE stores ADD COLUMN IF NOT EXISTS lat NUMERIC(9,6)")
+    cur.execute("ALTER TABLE stores ADD COLUMN IF NOT EXISTS lng NUMERIC(9,6)")
+    print("lat/lng 컬럼 확인 완료.")
 
     wb = load_workbook(CAFES_XLSX, read_only=True, data_only=True)
     ws = wb.active
@@ -44,7 +42,7 @@ def main():
         if lat and lng:
             data.append((float(lat), float(lng), store_id))
 
-    cur.executemany("UPDATE stores SET lat = :1, lng = :2 WHERE store_id = :3", data)
+    cur.executemany("UPDATE stores SET lat = %s, lng = %s WHERE store_id = %s", data)
     conn.commit()
     print(f"좌표 {len(data)}건 반영 완료.")
 

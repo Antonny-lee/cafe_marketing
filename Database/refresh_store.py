@@ -13,7 +13,7 @@ import re
 import sys
 from datetime import date
 
-import oracledb
+import psycopg2
 from dotenv import load_dotenv
 from openpyxl import load_workbook
 
@@ -32,12 +32,13 @@ def parse_target_store_id():
 
 
 def connect():
-    dsn = oracledb.makedsn(
-        os.environ["ORACLE_HOST"],
-        int(os.environ.get("ORACLE_PORT", 1521)),
-        service_name=os.environ["ORACLE_SERVICE_NAME"],
+    return psycopg2.connect(
+        host=os.environ["PG_POOL_HOST"],
+        port=os.environ["PG_POOL_PORT"],
+        dbname=os.environ["PG_POOL_DATABASE"],
+        user=os.environ["PG_POOL_USER"],
+        password=os.environ["PG_POOL_PASSWORD"],
     )
-    return oracledb.connect(user=os.environ["ORACLE_USER"], password=os.environ["ORACLE_PASSWORD"], dsn=dsn)
 
 
 def rows(path, sheet=None):
@@ -77,7 +78,7 @@ def parse_visit_count(text):
 
 
 def refresh_reviews(cur, store_id):
-    cur.execute("SELECT review_id FROM reviews WHERE store_id = :1", [store_id])
+    cur.execute("SELECT review_id FROM reviews WHERE store_id = %s", [store_id])
     existing_ids = {r[0] for r in cur.fetchall()}
 
     data = []
@@ -96,7 +97,7 @@ def refresh_reviews(cur, store_id):
         cur.executemany(
             "INSERT INTO reviews (review_id, store_id, reviewer_id, rating, visit_time, wait_time, "
             "tags, review_text, review_date_text, review_date, visit_count_text, visit_count) "
-            "VALUES (:1, :2, :3, :4, :5, :6, :7, :8, :9, :10, :11, :12)",
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
             data,
         )
     return len(data)
@@ -114,11 +115,11 @@ def refresh_tags(cur, store_id):
         best[key] = (r["store_id"], r["tag_text"], count, r["tag_category"], r["store_total_participants"])
     data = list(best.values())
 
-    cur.execute("DELETE FROM review_category_tags WHERE store_id = :1", [store_id])
+    cur.execute("DELETE FROM review_category_tags WHERE store_id = %s", [store_id])
     if data:
         cur.executemany(
             "INSERT INTO review_category_tags (store_id, tag_text, mention_count, tag_category, "
-            "store_total_participants) VALUES (:1, :2, :3, :4, :5)",
+            "store_total_participants) VALUES (%s, %s, %s, %s, %s)",
             data,
         )
     return len(data)

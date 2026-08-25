@@ -29,11 +29,9 @@ public class MarketReport {
     @Column(name = "report_date")
     private LocalDate reportDate;
 
-    @Lob
     @Column(name = "raw_text")
     private String rawText;
 
-    @Lob
     @Column(name = "opinion_text")
     private String opinionText;
 }

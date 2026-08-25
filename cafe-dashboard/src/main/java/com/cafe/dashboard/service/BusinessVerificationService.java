@@ -7,6 +7,7 @@ import com.cafe.dashboard.nts.NtsDtos;
 import com.cafe.dashboard.repository.BusinessRepository;
 import com.cafe.dashboard.repository.StoreRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -21,20 +22,30 @@ public class BusinessVerificationService {
     private final BusinessRepository businessRepository;
     private final StoreRepository storeRepository;
 
+    @Value("${app.biz-auth.mock:false}")
+    private boolean mockMode;
+
     public record VerifyResult(boolean valid, String message, Business business) {}
 
     public VerifyResult verify(String bNoRaw, String openDate, String ceoName, String bizName, String phone,
                                 Long ownerUserId) {
         String bNo = bNoRaw.replaceAll("[^0-9]", "");
 
-        NtsDtos.ValidateResponse response = ntsClient.validate(
-                new NtsDtos.ValidateRequest(List.of(NtsDtos.ValidateBusinessInput.of(bNo, openDate, ceoName))));
+        NtsDtos.ValidateResultItem item;
+        if (mockMode) {
+            // 개발용: 국세청 실제 검증을 건너뛰고 입력값을 그대로 인증 통과 처리한다.
+            item = new NtsDtos.ValidateResultItem(bNo, "01", "(모의 인증) 국세청 검증을 생략했습니다.",
+                    new NtsDtos.StatusInfo("계속사업자", "01", "일반과세자", "01", null, null, null));
+        } else {
+            NtsDtos.ValidateResponse response = ntsClient.validate(
+                    new NtsDtos.ValidateRequest(List.of(NtsDtos.ValidateBusinessInput.of(bNo, openDate, ceoName))));
 
-        if (response == null || response.data() == null || response.data().isEmpty()) {
-            return new VerifyResult(false, "국세청 응답을 받지 못했습니다. 잠시 후 다시 시도해주세요.", null);
+            if (response == null || response.data() == null || response.data().isEmpty()) {
+                return new VerifyResult(false, "국세청 응답을 받지 못했습니다. 잠시 후 다시 시도해주세요.", null);
+            }
+            item = response.data().get(0);
         }
 
-        NtsDtos.ValidateResultItem item = response.data().get(0);
         boolean valid = "01".equals(item.valid());
 
         if (!valid) {
@@ -106,5 +117,24 @@ public class BusinessVerificationService {
                 .orElseThrow(() -> new IllegalArgumentException("본인 소유의 사업자만 연결할 수 있습니다."));
         business.setStoreId(storeId == null || storeId.isBlank() ? null : storeId);
         businessRepository.save(business);
+    }
+
+    /** This user's verified businesses that are linked to a store (i.e. usable as an "active store"). */
+    public List<Business> getLinkedBusinesses(Long ownerUserId) {
+        return businessRepository.findByOwnerUserId(ownerUserId).stream()
+                .filter(b -> b.getStoreId() != null && !b.getStoreId().isBlank())
+                .toList();
+    }
+
+    public boolean ownsStore(Long ownerUserId, String storeId) {
+        if (storeId == null) return false;
+        return getLinkedBusinesses(ownerUserId).stream().anyMatch(b -> storeId.equals(b.getStoreId()));
+    }
+
+    public void deleteBusiness(String bizRegNo, Long ownerUserId) {
+        Business business = businessRepository.findById(bizRegNo)
+                .filter(b -> b.getOwnerUserId().equals(ownerUserId))
+                .orElseThrow(() -> new IllegalArgumentException("본인 소유의 사업자만 삭제할 수 있습니다."));
+        businessRepository.delete(business);
     }
 }

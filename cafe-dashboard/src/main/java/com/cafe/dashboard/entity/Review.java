@@ -40,7 +40,6 @@ public class Review {
     @Column(name = "tags", length = 1000)
     private String tags;
 
-    @Lob
     @Column(name = "review_text")
     private String reviewText;
 

@@ -45,6 +45,9 @@ public class BizAuthController {
         AppUser user = currentUser(principal);
         BusinessVerificationService.VerifyResult result =
                 verificationService.verify(bizRegNo, openDate, ceoName, bizName, phone, user.getUserId());
+        if (result.valid()) {
+            return "redirect:/";
+        }
         model.addAttribute("result", result);
         model.addAttribute("businesses", businessRepository.findByOwnerUserId(user.getUserId()));
         model.addAttribute("stores", storeRepository.findAll());
@@ -57,6 +60,13 @@ public class BizAuthController {
                              @RequestParam(required = false) String storeId) {
         AppUser user = currentUser(principal);
         verificationService.linkStore(bizRegNo, user.getUserId(), storeId);
+        return "redirect:/biz-auth";
+    }
+
+    @PostMapping("/biz-auth/delete")
+    public String delete(@AuthenticationPrincipal UserDetails principal, @RequestParam String bizRegNo) {
+        AppUser user = currentUser(principal);
+        verificationService.deleteBusiness(bizRegNo, user.getUserId());
         return "redirect:/biz-auth";
     }
 

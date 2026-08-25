@@ -18,11 +18,15 @@
         .today-greeting { font-family:'Noto Serif KR', serif; font-weight:700; font-size:19px; line-height:1.4; margin-bottom:18px; }
         .today-label { font-size:12.5px; color:var(--muted); margin-bottom:6px; }
         .today-amt { font-family:'IBM Plex Mono', monospace; font-size:28px; font-weight:700; color:var(--ink); }
-        .today-badges { display:flex; gap:8px; flex-wrap:wrap; margin:10px 0; }
-        .today-badge { font-family:'IBM Plex Mono', monospace; font-size:11px; font-weight:600; padding:4px 10px; border-radius:999px; }
-        .today-badge.up { background:#F1ECE4; color:var(--accent-dark); }
-        .today-badge.down { background:#F3E1DA; color:var(--rust); }
-        .today-sub { font-size:12px; color:var(--muted); }
+        .today-compare {
+            margin:12px 0 0; padding-top:10px; border-top:1px dashed var(--border);
+            display:flex; align-items:baseline; gap:8px;
+        }
+        .tcl-label { font-size:12px; color:var(--muted); }
+        .tcl-val { font-family:'IBM Plex Mono', monospace; font-size:13px; font-weight:700; }
+        .tcl-val.up { color:#C0392B; }
+        .tcl-val.down { color:#2F5FA8; }
+        .today-sub { font-size:12px; color:var(--muted); margin-top:10px; padding-top:10px; border-top:1px dashed var(--border); }
 
         .receipt-card { position:relative; }
         .receipt-card::before, .receipt-card::after {
@@ -47,13 +51,24 @@
         }
 
         .pace-amt { font-family:'IBM Plex Mono', monospace; font-size:20px; font-weight:700; color:var(--ink); margin:8px 0 16px; }
+        .pace-delta { display:flex; align-items:baseline; gap:8px; margin-bottom:14px; }
+        .pace-delta-val { font-family:'IBM Plex Mono', monospace; font-size:15px; font-weight:700; }
+        .pace-delta-val.up { color:#C0392B; }
+        .pace-delta-val.down { color:#2F5FA8; }
+        .pace-delta-label { font-size:12px; color:var(--muted); }
+        .pace-legend-item { cursor:pointer; padding:2px 7px; border-radius:6px; transition:background .12s ease, opacity .12s ease; user-select:none; }
+        .pace-legend-item:hover { background:#F1ECE4; }
+        .pace-legend-item.dim { opacity:0.4; }
+        .pace-chart-wrap { position:relative; }
+        .pace-guide { stroke:var(--muted); stroke-width:1; stroke-dasharray:3,3; opacity:0; }
+        .pace-dot { opacity:0; stroke:var(--card); stroke-width:1.5; }
         .home-history-link {
             display:block; text-align:center; font-size:13px; font-weight:600; color:var(--muted);
             padding:12px; border:1px dashed var(--border); border-radius:8px; margin-bottom:22px; text-decoration:none;
         }
     </style>
 
-    <a href="/my-store" class="store-pill">
+    <a href="/switch-store" class="store-pill">
         <span class="dot"></span> 우리 매장 <b th:text="${store.name}">매장명</b> <span class="arrow">›</span>
     </a>
 
@@ -63,13 +78,10 @@
     <div class="card" style="margin-bottom:18px;">
         <div class="today-label">오늘의 매출</div>
         <div class="today-amt" th:text="${#numbers.formatInteger(home.todaySales(),1,'COMMA')} + '원'">0원</div>
-        <div class="today-badges">
-            <span class="today-badge" th:if="${home.vsYesterdayPercent() != null}"
-                  th:classappend="${home.vsYesterdayPercent() >= 0} ? 'up' : 'down'"
-                  th:text="(${home.vsYesterdayPercent() >= 0} ? '▲ 어제보다 ' : '▼ 어제보다 ') + ${home.vsYesterdayAbsPercent()} + '%'"></span>
-            <span class="today-badge" th:if="${home.vsLastWeekPercent() != null}"
-                  th:classappend="${home.vsLastWeekPercent() >= 0} ? 'up' : 'down'"
-                  th:text="(${home.vsLastWeekPercent() >= 0} ? '▲ 지난주보다 ' : '▼ 지난주보다 ') + ${home.vsLastWeekAbsPercent()} + '%'"></span>
+        <div class="today-compare" th:if="${home.vsYesterdayPercent() != null}">
+            <span class="tcl-label">어제보다</span>
+            <span class="tcl-val" th:classappend="${home.vsYesterdayAmount() >= 0} ? 'up' : 'down'"
+                  th:text="(${home.vsYesterdayAmount() >= 0} ? '+' : '') + ${#numbers.formatInteger(home.vsYesterdayAmount(),1,'COMMA')} + '(' + ${home.vsYesterdayAbsPercent()} + '%)'"></span>
         </div>
         <div class="today-sub">
             결제 <span th:text="${home.expenseCountThisMonth()}">0</span>건
@@ -94,33 +106,137 @@
         <h2>이번 달 페이스</h2>
         <p class="muted" style="font-size:12.5px; margin-bottom:4px;">이대로면 이번 달 예상 매출</p>
         <div class="pace-amt" th:text="'약 ' + ${#numbers.formatInteger(home.projectedMonthSales(),1,'COMMA')} + '원'">0원</div>
-        <div class="bar-row">
-            <div class="bar-row-top"><span class="nm">이번 달 (오늘 기준)</span><span th:text="${#numbers.formatInteger(home.thisMonthToDate(),1,'COMMA')}"></span></div>
-            <div class="bar-track"><div class="bar-fill us" style="width:100%"></div></div>
-        </div>
-        <div class="bar-row">
-            <div class="bar-row-top"><span class="nm">저번달 같은 날짜</span><span th:text="${#numbers.formatInteger(home.lastMonthSameDayToDate(),1,'COMMA')}"></span></div>
-            <div class="bar-track"><div class="bar-fill comp" th:style="'width:' + ${home.paceBarPercent()} + '%'"></div></div>
-        </div>
-        <p class="muted" style="font-size:12px; margin-top:8px;" th:if="${home.paceChangePercent() != null}"
-           th:text="'저번달보다 ' + ${home.paceChangePercent()} + '% ' + (${home.paceChangePercent() >= 0} ? '빠른' : '느린') + ' 페이스예요.'"></p>
-    </div>
 
-    <div class="card" style="margin-bottom:18px;">
-        <h2>작년 같은 달과 비교</h2>
-        <div class="bar-row">
-            <div class="bar-row-top"><span class="nm">이번 달</span><span th:text="${#numbers.formatInteger(home.thisMonthToDate(),1,'COMMA')}"></span></div>
-            <div class="bar-track"><div class="bar-fill us" style="width:100%"></div></div>
+        <div class="pace-delta" th:if="${home.paceChangePercent() != null}">
+            <span class="pace-delta-val" th:classappend="${home.paceChangePercent() >= 0} ? 'up' : 'down'"
+                  th:text="(${home.paceChangePercent() >= 0} ? '▲ ' : '▼ ') + ${#numbers.formatDecimal(T(java.lang.Math).abs(home.paceChangePercent()),1,1)} + '%'"></span>
+            <span class="pace-delta-label">저번달보다 <span th:text="${home.paceChangePercent() >= 0} ? '빠른' : '느린'"></span> 페이스예요</span>
         </div>
-        <div class="bar-row">
-            <div class="bar-row-top"><span class="nm">작년 같은 달</span><span th:text="${#numbers.formatInteger(home.lastYearSameMonthToDate(),1,'COMMA')}"></span></div>
-            <div class="bar-track"><div class="bar-fill comp" th:style="'width:' + ${home.yoyBarPercent()} + '%'"></div></div>
+
+        <div class="trend-legend" id="paceLegend" style="margin-bottom:8px;">
+            <span class="pace-legend-item" data-series="mine"><span class="tl-dot" style="background:var(--accent-dark);"></span>이번 달</span>
+            <span class="pace-legend-item" data-series="ref"><span class="tl-dot" style="background:#C9BFA6;"></span>저번달</span>
         </div>
-        <p class="muted" style="font-size:12px; margin-top:8px;" th:if="${home.yoyChangePercent() != null}"
-           th:text="'작년 대비 ' + (${home.yoyChangePercent() >= 0} ? '+' : '') + ${home.yoyChangePercent()} + '% ' + (${home.yoyChangePercent() >= 0} ? '성장했어요' : '감소했어요') + '. 데이터가 더 쌓일수록 계절 패턴 비교가 정교해져요.'"></p>
+        <div class="pace-chart-wrap">
+            <svg id="paceSvg" class="line-svg" viewBox="0 0 560 180"></svg>
+            <div id="paceTooltip" class="chart-tooltip"></div>
+        </div>
     </div>
 
     <a href="/ledger?view=status" class="home-history-link">전체 매출 내역 보기 →</a>
+
+    <script th:inline="javascript">
+        (function () {
+            const mine = /*[[${home.thisMonthCumulative()}]]*/ [];
+            const ref = /*[[${home.lastMonthCumulative()}]]*/ [];
+            const svg = document.getElementById('paceSvg');
+            if (!svg || !ref.length) return;
+
+            const W = 560, H = 180, left = 8, right = 8, top = 16, bottom = 24;
+            const days = ref.length;
+            const xStep = days > 1 ? (W - left - right) / (days - 1) : 0;
+            const xFor = i => left + i * xStep;
+
+            const maxV = Math.max(1, ...mine, ...ref);
+            const yFor = v => top + (H - top - bottom) * (1 - v / maxV);
+
+            function pathFor(values) {
+                return values.map((v, i) => (i === 0 ? 'M' : 'L') + xFor(i) + ',' + yFor(v)).join(' ');
+            }
+
+            let content = '<path id="paceLineRef" class="trend-line dashed" d="' + pathFor(ref) + '" stroke="#C9BFA6"/>';
+
+            if (mine.length) {
+                const linePath = pathFor(mine);
+                const areaPath = linePath +
+                    ' L' + xFor(mine.length - 1) + ',' + (H - bottom) +
+                    ' L' + xFor(0) + ',' + (H - bottom) + ' Z';
+                content += '<path id="paceAreaMine" class="trend-area" d="' + areaPath + '" fill="rgba(62,74,42,0.14)"/>';
+                content += '<path id="paceLineMine" class="trend-line" d="' + linePath + '" stroke="#3E4A2A"/>';
+            }
+
+            for (let i = 0; i < days; i += 5) {
+                content += '<text class="line-val" x="' + xFor(i) + '" y="' + (H - 6) + '">' + (i + 1) + '</text>';
+            }
+
+            content += '<line id="paceGuide" class="pace-guide" x1="0" x2="0" y1="' + top + '" y2="' + (H - bottom) + '"/>';
+            content += '<circle id="paceDotRef" class="pace-dot" r="4" fill="#C9BFA6"/>';
+            content += '<circle id="paceDotMine" class="pace-dot" r="4" fill="#3E4A2A"/>';
+            content += '<rect id="paceHit" x="0" y="0" width="' + W + '" height="' + H + '" fill="transparent"/>';
+
+            svg.innerHTML = content;
+
+            const lineMine = document.getElementById('paceLineMine');
+            const areaMine = document.getElementById('paceAreaMine');
+            const lineRef = document.getElementById('paceLineRef');
+            const legend = document.getElementById('paceLegend');
+            let focus = null;
+
+            function setFocus(series) {
+                if (lineMine) lineMine.style.opacity = series === 'ref' ? 0.25 : 1;
+                if (areaMine) areaMine.style.opacity = series === 'ref' ? 0.25 : 1;
+                if (lineRef) lineRef.style.opacity = series === 'mine' ? 0.25 : 1;
+                legend.querySelectorAll('.pace-legend-item').forEach(el => {
+                    el.classList.toggle('dim', !!series && el.dataset.series !== series);
+                });
+            }
+
+            legend.querySelectorAll('.pace-legend-item').forEach(el => {
+                el.addEventListener('click', () => {
+                    focus = focus === el.dataset.series ? null : el.dataset.series;
+                    setFocus(focus);
+                });
+            });
+
+            const hit = document.getElementById('paceHit');
+            const guide = document.getElementById('paceGuide');
+            const dotMine = document.getElementById('paceDotMine');
+            const dotRef = document.getElementById('paceDotRef');
+            const tooltip = document.getElementById('paceTooltip');
+            const wrap = svg.parentElement;
+
+            hit.addEventListener('mousemove', (e) => {
+                const rect = svg.getBoundingClientRect();
+                const xInSvg = (e.clientX - rect.left) * (W / rect.width);
+                let idx = Math.round((xInSvg - left) / (xStep || 1));
+                idx = Math.max(0, Math.min(days - 1, idx));
+
+                const gx = xFor(idx);
+                guide.setAttribute('x1', gx);
+                guide.setAttribute('x2', gx);
+                guide.style.opacity = 1;
+
+                let html = '<b>' + (idx + 1) + '일</b><br>저번달 ' + ref[idx].toLocaleString() + '원';
+                dotRef.setAttribute('cx', gx);
+                dotRef.setAttribute('cy', yFor(ref[idx]));
+                dotRef.style.opacity = 1;
+
+                let tipY = yFor(ref[idx]);
+                if (idx < mine.length) {
+                    dotMine.setAttribute('cx', gx);
+                    dotMine.setAttribute('cy', yFor(mine[idx]));
+                    dotMine.style.opacity = 1;
+                    html += '<br>이번 달 ' + mine[idx].toLocaleString() + '원';
+                    tipY = yFor(mine[idx]);
+                } else {
+                    dotMine.style.opacity = 0;
+                }
+
+                tooltip.innerHTML = html;
+                tooltip.classList.add('show');
+                const wrapRect = wrap.getBoundingClientRect();
+                tooltip.style.left = ((gx / W) * wrapRect.width) + 'px';
+                tooltip.style.top = ((tipY / H) * wrapRect.height) + 'px';
+            });
+
+            hit.addEventListener('mouseleave', () => {
+                guide.style.opacity = 0;
+                dotMine.style.opacity = 0;
+                dotRef.style.opacity = 0;
+                tooltip.classList.remove('show');
+            });
+        })();
+    </script>
 </main>
 </body>
 </html>
