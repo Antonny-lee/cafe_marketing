@@ -65,7 +65,8 @@ public class LedgerService {
 
     public record ImportResult(int rowsImported, LocalDate from, LocalDate to, long totalAmount) {}
 
-    public record MonthSummary(String yearMonth, long sales, long expense, long netProfit, int salesBarPercent) {}
+    public record MonthSummary(String yearMonth, long sales, long expense, long netProfit,
+                                int salesBarPercent, int expenseBarPercent) {}
 
     public record HomeSummary(
             long todaySales,
@@ -163,13 +164,15 @@ public class LedgerService {
             long sales = dailySalesRepository.sumAmount(storeId, monthStart, monthEnd);
             long expense = expenseRepository.sumAmount(storeId, monthStart, monthEnd);
             String label = monthStart.format(DateTimeFormatter.ofPattern("yyyy.MM"));
-            raw.add(new MonthSummary(label, sales, expense, sales - expense, 0));
+            raw.add(new MonthSummary(label, sales, expense, sales - expense, 0, 0));
         }
 
         long maxSales = raw.stream().mapToLong(MonthSummary::sales).max().orElse(1);
+        long maxExpense = raw.stream().mapToLong(MonthSummary::expense).max().orElse(1);
         return raw.stream()
                 .map(m -> new MonthSummary(m.yearMonth(), m.sales(), m.expense(), m.netProfit(),
-                        maxSales == 0 ? 0 : (int) Math.round(100.0 * m.sales() / maxSales)))
+                        maxSales == 0 ? 0 : (int) Math.round(100.0 * m.sales() / maxSales),
+                        maxExpense == 0 ? 0 : (int) Math.round(100.0 * m.expense() / maxExpense)))
                 .toList();
     }
 

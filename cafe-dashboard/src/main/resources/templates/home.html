@@ -206,21 +206,25 @@
                 guide.setAttribute('x2', gx);
                 guide.style.opacity = 1;
 
-                let html = '<b>' + (idx + 1) + '일</b><br>저번달 ' + ref[idx].toLocaleString() + '원';
                 dotRef.setAttribute('cx', gx);
                 dotRef.setAttribute('cy', yFor(ref[idx]));
                 dotRef.style.opacity = 1;
 
+                const lines = [{ label: '저번달', value: ref[idx] }];
                 let tipY = yFor(ref[idx]);
                 if (idx < mine.length) {
                     dotMine.setAttribute('cx', gx);
                     dotMine.setAttribute('cy', yFor(mine[idx]));
                     dotMine.style.opacity = 1;
-                    html += '<br>이번 달 ' + mine[idx].toLocaleString() + '원';
+                    lines.push({ label: '이번 달', value: mine[idx] });
                     tipY = yFor(mine[idx]);
                 } else {
                     dotMine.style.opacity = 0;
                 }
+
+                lines.sort((a, b) => b.value - a.value);
+                const html = '<b>' + (idx + 1) + '일</b><br>' +
+                    lines.map(l => l.label + ' ' + l.value.toLocaleString() + '원').join('<br>');
 
                 tooltip.innerHTML = html;
                 tooltip.classList.add('show');

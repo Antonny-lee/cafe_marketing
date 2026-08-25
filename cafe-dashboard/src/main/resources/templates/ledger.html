@@ -73,6 +73,7 @@
         .mb-val { font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--muted); margin-bottom:5px; white-space:nowrap; }
         .mb-bar { width:100%; background:var(--border); border-radius:4px 4px 0 0; min-height:3px; }
         .mb-bar.current { background:var(--accent-dark); }
+        .mb-bar.expense.current { background:var(--rust); }
         .mb-x { font-size:11px; color:var(--muted); margin-top:8px; font-family:'IBM Plex Mono', monospace; }
 
         .daily-row { display:flex; justify-content:space-between; align-items:center; padding:9px 4px; border-bottom:1px solid var(--border); }
@@ -401,6 +402,19 @@
                     <span class="mb-val" th:text="${#numbers.formatInteger(m.sales(),1,'COMMA')}"></span>
                     <div class="mb-bar" th:classappend="${iter.last} ? 'current' : ''"
                          th:style="'height:' + (${m.salesBarPercent()} * 1.4) + 'px'"></div>
+                    <span class="mb-x" th:text="${m.yearMonth()}"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-bottom:18px;">
+            <h2>월별 지출 추이</h2>
+            <p class="muted" style="font-size:12.5px;" th:if="${#lists.isEmpty(monthlyComparison)}">아직 데이터가 없어요.</p>
+            <div class="mini-bars" th:unless="${#lists.isEmpty(monthlyComparison)}">
+                <div class="mb-col" th:each="m, iter : ${monthlyComparison}">
+                    <span class="mb-val" th:text="${#numbers.formatInteger(m.expense(),1,'COMMA')}"></span>
+                    <div class="mb-bar expense" th:classappend="${iter.last} ? 'current' : ''"
+                         th:style="'height:' + (${m.expenseBarPercent()} * 1.4) + 'px'"></div>
                     <span class="mb-x" th:text="${m.yearMonth()}"></span>
                 </div>
             </div>

@@ -24,7 +24,7 @@ public class CrawlRefreshService {
 
     private final ObjectMapper objectMapper;
 
-    private final ExecutorService executor = Executors.newCachedThreadPool();
+    private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Map<String, Job> jobs = new ConcurrentHashMap<>();
 
     private final Path webCrawlingDir = Paths.get(System.getProperty("user.dir"))
