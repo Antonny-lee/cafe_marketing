@@ -31,6 +31,14 @@ public class BusinessVerificationService {
                                 Long ownerUserId) {
         String bNo = bNoRaw.replaceAll("[^0-9]", "");
 
+        // 매장명이 우리가 크롤링해 둔 매장 목록과 정확히 일치해야만 인증을 진행한다 (엉뚱한 매장에
+        // 잘못 연결되는 걸 막기 위해 국세청 조회 전에 먼저 확인 - 어차피 실패할 거면 API도 아낌).
+        Store matchedStore = findStoreByExactName(bizName).orElse(null);
+        if (matchedStore == null) {
+            return new VerifyResult(false,
+                    "매장명이 등록된 매장 목록과 정확히 일치하지 않아요. 크롤링된 매장의 상호명을 그대로 입력해주세요.", null);
+        }
+
         NtsDtos.ValidateResultItem item;
         if (mockMode) {
             // 개발용: 국세청 실제 검증을 건너뛰고 입력값을 그대로 인증 통과 처리한다.
@@ -71,30 +79,20 @@ public class BusinessVerificationService {
             business.setTaxTypeCode(status.tax_type_cd());
         }
 
-        if (business.getStoreId() == null && bizName != null && !bizName.isBlank()) {
-            findStoreByName(bizName).ifPresent(store -> business.setStoreId(store.getStoreId()));
-        }
+        business.setStoreId(matchedStore.getStoreId());
 
         businessRepository.save(business);
         return new VerifyResult(true, "인증된 사업자예요", business);
     }
 
-    private Optional<Store> findStoreByName(String bizName) {
+    /** Exact match only (after whitespace/case normalization) - a fuzzy "contains" match used to
+     * risk linking to the wrong crawled store when the typed name partially overlapped another. */
+    private Optional<Store> findStoreByExactName(String bizName) {
         String needle = normalize(bizName);
         if (needle.isEmpty()) return Optional.empty();
 
-        List<Store> stores = storeRepository.findAll();
-
-        Optional<Store> exact = stores.stream()
+        return storeRepository.findAll().stream()
                 .filter(s -> normalize(s.getName()).equals(needle))
-                .findFirst();
-        if (exact.isPresent()) return exact;
-
-        return stores.stream()
-                .filter(s -> {
-                    String candidate = normalize(s.getName());
-                    return !candidate.isEmpty() && (candidate.contains(needle) || needle.contains(candidate));
-                })
                 .findFirst();
     }
 
