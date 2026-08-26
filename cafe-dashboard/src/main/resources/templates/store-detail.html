@@ -72,6 +72,10 @@
                     btn.disabled = false;
                     clearInterval(polling);
                     setTimeout(() => modal.classList.remove('open'), 1600);
+                } else if (data.status === 'CURRENT') {
+                    modalStatus.textContent = data.errorMessage || '지금 있는 최신 데이터로 보여드릴게요.';
+                    clearInterval(polling);
+                    setTimeout(() => location.reload(), 1200);
                 }
             }
 
@@ -89,8 +93,11 @@
                 modal.classList.add('open');
                 modalStatus.textContent = '갱신 시작 중...';
                 const res = await fetch('/stores/' + storeId + '/refresh', { method: 'POST' });
-                render(await res.json());
-                polling = setInterval(poll, 2500);
+                const data = await res.json();
+                render(data);
+                if (data.status === 'RUNNING') {
+                    polling = setInterval(poll, 2500);
+                }
             });
         })();
     </script>

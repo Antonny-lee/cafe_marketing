@@ -32,13 +32,23 @@
         <form method="post" th:action="@{/biz-auth/verify}">
             <div class="field" style="margin-bottom:12px;">
                 <label class="muted" style="display:block; font-size:12px; margin-bottom:4px;">사업자등록번호 (10자리, 하이픈 없이 또는 포함)</label>
-                <input type="text" name="bizRegNo" placeholder="000-00-00000" required
+                <input type="text" name="bizRegNo" id="bizRegNo" placeholder="000-00-00000" required maxlength="12" inputmode="numeric"
                        style="width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:6px;"/>
             </div>
             <div class="field" style="margin-bottom:12px;">
-                <label class="muted" style="display:block; font-size:12px; margin-bottom:4px;">개업일자 (YYYYMMDD)</label>
-                <input type="text" name="openDate" placeholder="20240312" required
-                       style="width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:6px;"/>
+                <label class="muted" style="display:block; font-size:12px; margin-bottom:4px;">개업일자</label>
+                <div style="display:flex; gap:8px;">
+                    <select id="openYear" required style="flex:1; padding:8px 10px; border:1px solid var(--border); border-radius:6px;">
+                        <option value="">년도</option>
+                    </select>
+                    <select id="openMonth" required style="flex:1; padding:8px 10px; border:1px solid var(--border); border-radius:6px;">
+                        <option value="">월</option>
+                    </select>
+                    <select id="openDay" required style="flex:1; padding:8px 10px; border:1px solid var(--border); border-radius:6px;">
+                        <option value="">일</option>
+                    </select>
+                </div>
+                <input type="hidden" name="openDate" id="openDate"/>
             </div>
             <div class="field" style="margin-bottom:12px;">
                 <label class="muted" style="display:block; font-size:12px; margin-bottom:4px;">대표자명</label>
@@ -52,7 +62,7 @@
             </div>
             <div class="field" style="margin-bottom:16px;">
                 <label class="muted" style="display:block; font-size:12px; margin-bottom:4px;">연락처</label>
-                <input type="text" name="phone" placeholder="02-000-0000"
+                <input type="text" name="phone" id="phone" placeholder="02-000-0000" maxlength="13" inputmode="numeric"
                        style="width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:6px;"/>
             </div>
             <button type="submit" style="width:100%; padding:12px; border:none; border-radius:6px; background:var(--accent-dark); color:#fff; font-weight:700; cursor:pointer;">
@@ -60,6 +70,67 @@
             </button>
         </form>
     </div>
+
+    <script>
+        (function () {
+            const bizRegNo = document.getElementById('bizRegNo');
+            bizRegNo.addEventListener('input', () => {
+                const d = bizRegNo.value.replace(/\D/g, '').slice(0, 10);
+                if (d.length <= 3) bizRegNo.value = d;
+                else if (d.length <= 5) bizRegNo.value = d.slice(0, 3) + '-' + d.slice(3);
+                else bizRegNo.value = d.slice(0, 3) + '-' + d.slice(3, 5) + '-' + d.slice(5, 10);
+            });
+
+            const phone = document.getElementById('phone');
+            phone.addEventListener('input', () => {
+                let d = phone.value.replace(/\D/g, '').slice(0, 11);
+                let formatted;
+                if (d.startsWith('02')) {
+                    if (d.length <= 2) formatted = d;
+                    else if (d.length <= 5) formatted = d.slice(0, 2) + '-' + d.slice(2);
+                    else if (d.length <= 9) formatted = d.slice(0, 2) + '-' + d.slice(2, 5) + '-' + d.slice(5);
+                    else formatted = d.slice(0, 2) + '-' + d.slice(2, 6) + '-' + d.slice(6, 10);
+                } else {
+                    if (d.length <= 3) formatted = d;
+                    else if (d.length <= 6) formatted = d.slice(0, 3) + '-' + d.slice(3);
+                    else if (d.length <= 10) formatted = d.slice(0, 3) + '-' + d.slice(3, 6) + '-' + d.slice(6);
+                    else formatted = d.slice(0, 3) + '-' + d.slice(3, 7) + '-' + d.slice(7, 11);
+                }
+                phone.value = formatted;
+            });
+
+            const yearSel = document.getElementById('openYear');
+            const monthSel = document.getElementById('openMonth');
+            const daySel = document.getElementById('openDay');
+            const openDateHidden = document.getElementById('openDate');
+            const currentYear = new Date().getFullYear();
+
+            for (let y = currentYear; y >= 1970; y--) {
+                yearSel.insertAdjacentHTML('beforeend', '<option value="' + y + '">' + y + '년</option>');
+            }
+            for (let m = 1; m <= 12; m++) {
+                monthSel.insertAdjacentHTML('beforeend', '<option value="' + m + '">' + m + '월</option>');
+            }
+            for (let d = 1; d <= 31; d++) {
+                daySel.insertAdjacentHTML('beforeend', '<option value="' + d + '">' + d + '일</option>');
+            }
+
+            function syncOpenDate() {
+                const y = yearSel.value, m = monthSel.value, d = daySel.value;
+                openDateHidden.value = (y && m && d)
+                    ? y + String(m).padStart(2, '0') + String(d).padStart(2, '0')
+                    : '';
+            }
+            [yearSel, monthSel, daySel].forEach(el => el.addEventListener('change', syncOpenDate));
+
+            document.querySelector('form').addEventListener('submit', (e) => {
+                if (!openDateHidden.value) {
+                    e.preventDefault();
+                    alert('개업일자를 년/월/일 모두 선택해주세요.');
+                }
+            });
+        })();
+    </script>
 
     <div class="card section-title" th:if="${!#lists.isEmpty(businesses)}">
         <h2>등록된 사업자</h2>

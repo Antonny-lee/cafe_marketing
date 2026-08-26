@@ -25,6 +25,14 @@ public class CrawlRefreshController {
     @ResponseBody
     @ResponseStatus(HttpStatus.ACCEPTED)
     public RefreshStatus start(@PathVariable String storeId) {
+        if (crawlRefreshService.isBatchRunning()) {
+            // Don't start a second crawl on top of the nightly batch - just tell the caller to
+            // show what's already in the DB (which the batch is actively keeping fresh anyway).
+            String eta = crawlRefreshService.batchEtaLabel();
+            String message = "지금 전체 매장 자동 업데이트가 진행 중이에요" + (eta != null ? " (" + eta + "쯤 완료 예정)" : "")
+                    + ". 우선 지금 있는 최신 데이터로 보여드릴게요.";
+            return new RefreshStatus("CURRENT", List.of(), null, null, message);
+        }
         CrawlRefreshService.Job job = crawlRefreshService.start(storeId);
         return toStatus(job);
     }

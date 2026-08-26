@@ -20,8 +20,8 @@ from openpyxl import load_workbook
 load_dotenv()
 
 BASE = os.path.join(os.path.dirname(__file__), "..", "Web crawling")
-REVIEW_XLSX = os.path.join(BASE, "Review", "Review.xlsx")
-REVIEW_CATEGORY_XLSX = os.path.join(BASE, "Review", "Review_category.xlsx")
+REVIEW_DIR = os.path.join(BASE, "Review", "reviews_by_store")
+REVIEW_CATEGORY_DIR = os.path.join(BASE, "Review", "tags_by_store")
 
 
 def parse_target_store_id():
@@ -81,8 +81,12 @@ def refresh_reviews(cur, store_id):
     cur.execute("SELECT review_id FROM reviews WHERE store_id = %s", [store_id])
     existing_ids = {r[0] for r in cur.fetchall()}
 
+    review_path = os.path.join(REVIEW_DIR, f"{store_id}.xlsx")
+    if not os.path.exists(review_path):
+        return 0
+
     data = []
-    for r in rows(REVIEW_XLSX):
+    for r in rows(review_path):
         if r["store_id"] != store_id or r["review_id"] in existing_ids:
             continue
         d = parse_review_date(r["review_date"])
@@ -105,14 +109,16 @@ def refresh_reviews(cur, store_id):
 
 def refresh_tags(cur, store_id):
     best = {}
-    for r in rows(REVIEW_CATEGORY_XLSX):
-        if r["store_id"] != store_id:
-            continue
-        key = r["tag_text"]
-        count = r["mention_count"] or 0
-        if key in best and count <= (best[key][2] or 0):
-            continue
-        best[key] = (r["store_id"], r["tag_text"], count, r["tag_category"], r["store_total_participants"])
+    tag_path = os.path.join(REVIEW_CATEGORY_DIR, f"{store_id}.xlsx")
+    if os.path.exists(tag_path):
+        for r in rows(tag_path):
+            if r["store_id"] != store_id:
+                continue
+            key = r["tag_text"]
+            count = r["mention_count"] or 0
+            if key in best and count <= (best[key][2] or 0):
+                continue
+            best[key] = (r["store_id"], r["tag_text"], count, r["tag_category"], r["store_total_participants"])
     data = list(best.values())
 
     cur.execute("DELETE FROM review_category_tags WHERE store_id = %s", [store_id])

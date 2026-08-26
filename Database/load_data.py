@@ -22,8 +22,8 @@ load_dotenv()
 BASE = os.path.join(os.path.dirname(__file__), "..", "Web crawling")
 CAFES_XLSX = os.path.join(BASE, "Home", "cafes.xlsx")
 MENU_XLSX = os.path.join(BASE, "Menu", "menu.xlsx")
-REVIEW_XLSX = os.path.join(BASE, "Review", "Review.xlsx")
-REVIEW_CATEGORY_XLSX = os.path.join(BASE, "Review", "Review_category.xlsx")
+REVIEW_DIR = os.path.join(BASE, "Review", "reviews_by_store")
+REVIEW_CATEGORY_DIR = os.path.join(BASE, "Review", "tags_by_store")
 INFO_XLSX = os.path.join(BASE, "Info", "Info.xlsx")
 AI_BRIEFING_XLSX = os.path.join(BASE, "AIBriefing", "AIBriefing.xlsx")
 REPORT_DOCX = os.path.join(os.path.dirname(__file__), "..", "report.docx")
@@ -61,6 +61,15 @@ def rows(path, sheet=None, header_row=1):
         if r[0] is None:
             continue
         yield dict(zip(headers, r))
+
+
+def iter_store_files(directory):
+    """Yields the path of every per-store xlsx file in a reviews_by_store/tags_by_store dir."""
+    if not os.path.isdir(directory):
+        return
+    for filename in sorted(os.listdir(directory)):
+        if filename.endswith(".xlsx"):
+            yield os.path.join(directory, filename)
 
 
 def load_stores(cur):
@@ -129,14 +138,15 @@ def parse_visit_count(text):
 def load_reviews(cur):
     print("reviews 적재 중 (시간이 좀 걸립니다)...")
     data = []
-    for r in rows(REVIEW_XLSX):
-        d = parse_review_date(r["review_date"])
-        data.append((
-            r["review_id"], r["store_id"], r["reviewer_id"],
-            float(r["rating"]) if r["rating"] not in (None, "") else None,
-            r["visit_time"], r["wait_time"], r["tags"], r["review_text"],
-            r["review_date"], d, r["visit_count"], parse_visit_count(r["visit_count"]),
-        ))
+    for path in iter_store_files(REVIEW_DIR):
+        for r in rows(path):
+            d = parse_review_date(r["review_date"])
+            data.append((
+                r["review_id"], r["store_id"], r["reviewer_id"],
+                float(r["rating"]) if r["rating"] not in (None, "") else None,
+                r["visit_time"], r["wait_time"], r["tags"], r["review_text"],
+                r["review_date"], d, r["visit_count"], parse_visit_count(r["visit_count"]),
+            ))
     cur.executemany(
         "INSERT INTO reviews (review_id, store_id, reviewer_id, rating, visit_time, wait_time, "
         "tags, review_text, review_date_text, review_date, visit_count_text, visit_count) "
@@ -150,14 +160,15 @@ def load_review_category(cur):
     print("review_category_tags 적재 중...")
     best = {}
     dup_count = 0
-    for r in rows(REVIEW_CATEGORY_XLSX):
-        key = (r["store_id"], r["tag_text"])
-        count = r["mention_count"] or 0
-        if key in best:
-            dup_count += 1
-            if count <= (best[key][2] or 0):
-                continue
-        best[key] = (r["store_id"], r["tag_text"], count, r["tag_category"], r["store_total_participants"])
+    for path in iter_store_files(REVIEW_CATEGORY_DIR):
+        for r in rows(path):
+            key = (r["store_id"], r["tag_text"])
+            count = r["mention_count"] or 0
+            if key in best:
+                dup_count += 1
+                if count <= (best[key][2] or 0):
+                    continue
+            best[key] = (r["store_id"], r["tag_text"], count, r["tag_category"], r["store_total_participants"])
     data = list(best.values())
     cur.executemany(
         "INSERT INTO review_category_tags (store_id, tag_text, mention_count, tag_category, "

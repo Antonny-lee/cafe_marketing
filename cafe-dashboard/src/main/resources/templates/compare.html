@@ -122,7 +122,12 @@
                     modalStatus.textContent = '최신 리뷰 수집 시작 중...';
                     try {
                         const res = await fetch('/stores/' + storeId + '/refresh', { method: 'POST' });
-                        await res.json();
+                        const data = await res.json();
+                        if (data.status === 'CURRENT') {
+                            modalStatus.textContent = (data.errorMessage || '지금 있는 최신 데이터로 분석할게요.');
+                            form.submit();
+                            return;
+                        }
                         poll();
                         polling = setInterval(poll, 2500);
                     } catch (e) {

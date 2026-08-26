@@ -1,5 +1,6 @@
 import asyncio
 import os
+import random
 import re
 import sys
 import time
@@ -11,7 +12,8 @@ from scrapling.fetchers import AsyncStealthySession
 from scrapling.parser import Selector
 
 CAFES_XLSX = "../Home/cafes.xlsx"
-OUTPUT_XLSX = "Review.xlsx"
+OUTPUT_DIR = "reviews_by_store"  # one xlsx per store -- keeps dedup lookups fast and lets
+                                  # different stores' crawls never touch the same file
 REVIEW_URL_TMPL = "https://pcmap.place.naver.com/restaurant/{pid}/review/visitor"
 MONTHS_BACK_DAYS = 182  # ~6 months
 MAX_MORE_CLICKS = 1000    # generous safety cap per store (not a real limit, just anti-infinite-loop)
@@ -21,11 +23,16 @@ CLICKS_PER_SESSION = 80   # restart the browser after this many "더보기" clic
                           # 200 let extreme stores run long enough to peg the CPU for 1h+ before ever
                           # restarting; 60 wasted too much time re-walking already-seen reviews after
                           # every restart. 80 is a middle ground.
-INTER_STORE_DELAY_SEC = 8  # pause between stores; back-to-back browser launches across 70 stores
-                           # triggered Naver's 429 rate limit on most of a run before this was added
+INTER_STORE_DELAY_RANGE_SEC = (6, 14)  # randomized pause between stores -- a fixed delay is itself
+                          # a bot fingerprint (every request exactly N seconds apart); jittering keeps
+                          # the average pacing that avoided Naver's 429 while looking less mechanical
 MAX_EMPTY_PASSES = 2      # give up on a store after this many consecutive session restarts that
                           # found zero new reviews (a very active store's already-collected prefix
                           # can grow long enough that a full session's clicks never walk past it)
+
+
+def output_path_for(store_id: str) -> str:
+    return os.path.join(OUTPUT_DIR, f"{store_id}.xlsx")
 
 CUTOFF = date.today() - timedelta(days=MONTHS_BACK_DAYS)
 
@@ -389,6 +396,7 @@ async def main():
     except Exception:
         pass
 
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
     target_store_id = parse_target_store_id()
 
     print("cafes.xlsx에서 매장 목록 읽는 중...")
@@ -404,33 +412,34 @@ async def main():
         store_list = stores[:limit]
 
     limit = len(store_list)
-    print(f"총 {len(stores)}개 매장 중 {limit}개 처리합니다.")
+    print(f"총 {len(stores)}개 매장 중 {limit}개 처리합니다. (매장별로 {OUTPUT_DIR}/<store_id>.xlsx에 저장)")
     print(f"수집 기준: 최근 6개월 (기준일 {CUTOFF} 이후)")
-
-    seen_keys, next_seq = load_existing_reviews(OUTPUT_XLSX)
-    if seen_keys:
-        print(f"기존 {OUTPUT_XLSX}에서 리뷰 {len(seen_keys)}개 확인. 이미 수집된 리뷰는 건너뛰고 새 리뷰만 추가합니다.")
 
     all_rows = []
     start_time = time.time()
 
     for i, store in enumerate(store_list, 1):
         if i > 1:
-            await asyncio.sleep(INTER_STORE_DELAY_SEC)
+            await asyncio.sleep(random.uniform(*INTER_STORE_DELAY_RANGE_SEC))
 
         store_start = time.time()
+        store_path = output_path_for(store["store_id"])
+        seen_keys, next_seq = load_existing_reviews(store_path)
+        if seen_keys:
+            print(f"  기존 {store_path}에서 리뷰 {len(seen_keys)}개 확인. 이미 수집된 리뷰는 건너뛰고 새 리뷰만 추가합니다.")
+
         print(f"\n[{i}/{limit}] {store['name']} ({store['naver_id']}) 리뷰 수집 중...")
 
         seq_holder = [next_seq.get(store["store_id"], 0)]
         store_rows: list = []
 
-        async def on_pass(new_reviews, store=store, seq_holder=seq_holder, store_rows=store_rows):
+        async def on_pass(new_reviews, store=store, seq_holder=seq_holder, store_rows=store_rows, store_path=store_path):
             pass_rows = []
             for r in new_reviews:
                 seq_holder[0] += 1
                 pass_rows.append(review_to_row(store, r, seq_holder[0]))
             store_rows.extend(pass_rows)
-            save_to_excel(pass_rows, OUTPUT_XLSX)  # persist immediately -- a store can need
+            save_to_excel(pass_rows, store_path)  # persist immediately -- a store can need
             # many browser restarts, so don't wait until it's fully done to save
 
         try:
@@ -439,7 +448,6 @@ async def main():
             print(f"  실패: {e}")
             reviews = []
 
-        next_seq[store["store_id"]] = seq_holder[0]
         all_rows.extend(store_rows)
 
         store_elapsed = time.time() - store_start
@@ -454,7 +462,7 @@ async def main():
               f"예상 남은 시간 {format_eta(remaining)}")
 
     total_elapsed = time.time() - start_time
-    print(f"\n완료: 신규 {len(all_rows)}개 리뷰 저장 -> {OUTPUT_XLSX} (총 소요시간 {format_eta(total_elapsed)})")
+    print(f"\n완료: 신규 {len(all_rows)}개 리뷰 저장 -> {OUTPUT_DIR}/ (총 소요시간 {format_eta(total_elapsed)})")
 
 
 if __name__ == "__main__":

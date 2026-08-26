@@ -1,3 +1,5 @@
+import os
+import random
 import sys
 import time
 
@@ -6,9 +8,13 @@ from openpyxl.styles import Alignment
 from scrapling.fetchers import Fetcher
 
 CAFES_XLSX = "../Home/cafes.xlsx"
-OUTPUT_XLSX = "Review_category.xlsx"
+OUTPUT_DIR = "tags_by_store"  # one xlsx per store, matching Review.py's reviews_by_store
 DETAIL_URL_TMPL = "https://m.place.naver.com/place/{pid}/review/visitor"
-REQUEST_DELAY_SEC = 0.6
+REQUEST_DELAY_RANGE_SEC = (0.4, 1.0)  # randomized instead of a fixed 0.6s -- same anti-fingerprint reasoning as Review.py
+
+
+def output_path_for(store_id: str) -> str:
+    return os.path.join(OUTPUT_DIR, f"{store_id}.xlsx")
 
 # Naver's review-keyword codes are a fixed, site-wide vocabulary (not per-store),
 # so one lookup table covers every store. Grouped along the same lines as
@@ -160,20 +166,6 @@ def parse_target_store_id():
     return None
 
 
-def load_existing_rows(path: str):
-    import os
-    if not os.path.exists(path):
-        return []
-    wb = load_workbook(path)
-    ws = wb.active
-    rows = []
-    for row in ws.iter_rows(min_row=2, values_only=True):
-        if not row[0]:
-            continue
-        rows.append(dict(zip(HEADERS, row)))
-    return rows
-
-
 def main():
     target_store_id = parse_target_store_id()
 
@@ -190,10 +182,11 @@ def main():
         store_list = stores[:limit]
 
     limit = len(store_list)
-    print(f"총 {len(stores)}개 매장 중 {limit}개 처리합니다.")
+    print(f"총 {len(stores)}개 매장 중 {limit}개 처리합니다. (매장별로 {OUTPUT_DIR}/<store_id>.xlsx에 저장)")
 
-    all_rows = []
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
     unknown_codes = set()
+    total_rows = 0
     for i, store in enumerate(store_list, 1):
         print(f"[{i}/{limit}] {store['name']} ({store['naver_id']}) 카테고리 태그 가져오는 중...")
         try:
@@ -205,27 +198,20 @@ def main():
         for r in rows:
             if r["tag_category"] == "기타":
                 unknown_codes.add((r["_code"], r["tag_text"]))
-        all_rows.extend(rows)
-        time.sleep(REQUEST_DELAY_SEC)
+            r.pop("_code", None)
+
+        # 매장 하나당 파일 하나 = 항상 그 매장의 최신 스냅샷으로 통째로 덮어씀
+        # (다른 매장 파일과 병합할 필요가 없어짐)
+        save_to_excel(rows, output_path_for(store["store_id"]))
+        total_rows += len(rows)
+        time.sleep(random.uniform(*REQUEST_DELAY_RANGE_SEC))
 
     if unknown_codes:
         print(f"\n매핑 안 된 코드 {len(unknown_codes)}개 (tag_category='기타'로 처리됨):")
         for code, text in sorted(unknown_codes):
             print(f"  {code} ({text})")
 
-    for r in all_rows:
-        r.pop("_code", None)
-
-    if target_store_id:
-        # store-id 모드는 다른 매장 데이터를 지우면 안 되므로, 기존 파일에서 이 매장 행만
-        # 새로 수집한 결과로 교체하고 나머지 매장 행은 그대로 유지한다.
-        existing = load_existing_rows(OUTPUT_XLSX)
-        merged = [r for r in existing if r["store_id"] != target_store_id] + all_rows
-        save_to_excel(merged, OUTPUT_XLSX)
-        print(f"완료: {target_store_id} 태그 {len(all_rows)}개 반영 (전체 {len(merged)}개) -> {OUTPUT_XLSX}")
-    else:
-        save_to_excel(all_rows, OUTPUT_XLSX)
-        print(f"완료: {len(all_rows)}개 태그 저장 -> {OUTPUT_XLSX}")
+    print(f"완료: 총 {total_rows}개 태그 저장 -> {OUTPUT_DIR}/")
 
 
 if __name__ == "__main__":
