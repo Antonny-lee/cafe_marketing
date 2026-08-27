@@ -26,9 +26,20 @@ public class BizAuthController {
     @GetMapping("/biz-auth")
     public String form(@AuthenticationPrincipal UserDetails principal,
                         @RequestParam(required = false) String needStore,
+                        @RequestParam(required = false) String manage,
                         Model model) {
         AppUser user = currentUser(principal);
-        model.addAttribute("businesses", businessRepository.findByOwnerUserId(user.getUserId()));
+        var businesses = businessRepository.findByOwnerUserId(user.getUserId());
+
+        // 이미 사업자 인증 + 매장 연결까지 끝난 사용자는 등록 화면을 건너뛰고 홈으로 보낸다.
+        // (?manage=1 로 접근하면 관리 목적으로 화면을 그대로 보여준다.)
+        boolean hasLinkedStore = businesses.stream()
+                .anyMatch(b -> b.getStoreId() != null && !b.getStoreId().isBlank());
+        if (hasLinkedStore && manage == null) {
+            return "redirect:/";
+        }
+
+        model.addAttribute("businesses", businesses);
         model.addAttribute("stores", storeRepository.findAll());
         model.addAttribute("needStore", needStore != null);
         return "biz-auth";

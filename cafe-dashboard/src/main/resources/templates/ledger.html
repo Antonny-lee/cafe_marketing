@@ -158,7 +158,7 @@
                 </div>
                 <div class="field" style="flex:1; margin-bottom:0;">
                     <label>매출액 (원)</label>
-                    <input type="number" name="amount" placeholder="예: 1240000" required/>
+                    <input type="text" name="amount" class="amount-input" inputmode="numeric" placeholder="예: 1,240,000" required/>
                 </div>
                 <button type="submit" style="padding:9px 16px; border:none; border-radius:6px; background:var(--accent-dark); color:#fff; font-weight:700; cursor:pointer; white-space:nowrap;">등록</button>
             </form>
@@ -290,7 +290,7 @@
                 </div>
                 <div class="field">
                     <label>금액 (원)</label>
-                    <input type="number" name="amount" placeholder="예: 340000" required/>
+                    <input type="text" name="amount" class="amount-input" inputmode="numeric" placeholder="예: 340,000" required/>
                 </div>
                 <div class="field">
                     <label>날짜</label>
@@ -348,7 +348,7 @@
                     </div>
                     <div class="field">
                         <label>금액 (원)</label>
-                        <input type="number" name="amount" th:value="${fc.amount}" required/>
+                        <input type="text" name="amount" class="amount-input" inputmode="numeric" th:value="${fc.amount}" required/>
                     </div>
                     <div class="field">
                         <label>매달 며칠에 자동 등록할지</label>
@@ -447,5 +447,35 @@
         </div>
     </div>
 </main>
+
+<script>
+    // 금액 입력칸(.amount-input)에 천 단위 콤마를 자동으로 찍어준다. 전송 직전에 콤마를 제거해 서버는 숫자만 받는다.
+    (function () {
+        function toDigits(v) { return (v || '').replace(/[^\d]/g, ''); }
+        function format(el) {
+            const d = toDigits(el.value);
+            el.value = d ? Number(d).toLocaleString('en-US') : '';
+        }
+        const inputs = Array.from(document.querySelectorAll('.amount-input'));
+        inputs.forEach(el => {
+            format(el); // 미리 채워진 값(고정비 등) 포맷
+            el.addEventListener('input', () => {
+                const caretDigits = toDigits(el.value.slice(0, el.selectionStart)).length;
+                format(el);
+                let seen = 0, pos = el.value.length;
+                for (let i = 0; i < el.value.length; i++) {
+                    if (/\d/.test(el.value[i])) seen++;
+                    if (seen === caretDigits) { pos = i + 1; break; }
+                }
+                try { el.setSelectionRange(pos, pos); } catch (e) {}
+            });
+        });
+        document.querySelectorAll('form').forEach(f => {
+            f.addEventListener('submit', () => {
+                f.querySelectorAll('.amount-input').forEach(el => { el.value = toDigits(el.value); });
+            });
+        });
+    })();
+</script>
 </body>
 </html>

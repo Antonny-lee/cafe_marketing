@@ -31,7 +31,12 @@ public class CompareController {
     @Value("${kakao.map-key}")
     private String kakaoMapKey;
 
+    /** 세션에 마지막 비교 상태를 저장해, 다른 탭에 갔다 와도(로그아웃 전까지) 초기화되지 않게 한다. */
+    private static final String SESSION_RIVALS = "compare.lastRivals";
+    private static final String SESSION_ANALYZED = "compare.lastAnalyzed";
+
     @GetMapping("/compare")
+    @SuppressWarnings("unchecked")
     public String form(@AuthenticationPrincipal UserDetails principal, HttpSession session,
                         @RequestParam(required = false) List<String> rivals,
                         @RequestParam(required = false) String analyzeError,
@@ -42,7 +47,26 @@ public class CompareController {
             return "redirect:/biz-auth?needStore=1";
         }
 
-        List<String> rivalIds = cleanRivals(mineId.get(), rivals);
+        // URL에 rivals 파라미터가 있으면 그걸 우선 사용(분석 직후 리다이렉트 등),
+        // 없으면 세션에 저장된 마지막 비교 상태를 복원한다.
+        List<String> effectiveRivals;
+        boolean showResults;
+        if (rivals != null) {
+            effectiveRivals = rivals;
+            showResults = "1".equals(analyzed);
+        } else {
+            effectiveRivals = (List<String>) session.getAttribute(SESSION_RIVALS);
+            showResults = Boolean.TRUE.equals(session.getAttribute(SESSION_ANALYZED));
+        }
+
+        List<String> rivalIds = cleanRivals(mineId.get(), effectiveRivals);
+
+        // 결과가 보이는 상태라면 세션에도 반영해 다음 방문 때 복원되도록 한다.
+        if (showResults) {
+            session.setAttribute(SESSION_RIVALS, rivalIds);
+            session.setAttribute(SESSION_ANALYZED, Boolean.TRUE);
+        }
+
         model.addAttribute("stores", compareService.allStores().stream()
                 .filter(s -> !s.getStoreId().equals(mineId.get()))
                 .toList());
@@ -50,7 +74,7 @@ public class CompareController {
         model.addAttribute("selectedRivals", rivalIds);
         model.addAttribute("analyzeError", analyzeError);
         // "비교하기"를 눌러 분석이 한 번 실행된 뒤에만 종합 평가 이하 결과를 보여준다.
-        model.addAttribute("showResults", "1".equals(analyzed));
+        model.addAttribute("showResults", showResults);
 
         model.addAttribute("result", compareService.compare(mineId.get(), rivalIds));
         model.addAttribute("insight", insightService.getCached(mineId.get()).orElse(null));
@@ -70,6 +94,9 @@ public class CompareController {
         String mine = activeStoreResolver.resolve(principal, session)
                 .orElseThrow(() -> new IllegalStateException("연결된 매장이 없습니다."));
         List<String> rivalIds = cleanRivals(mine, rivals);
+        // 마지막 비교 상태를 세션에 저장 (로그아웃 전까지 유지, 다른 탭 다녀와도 복원)
+        session.setAttribute(SESSION_RIVALS, rivalIds);
+        session.setAttribute(SESSION_ANALYZED, Boolean.TRUE);
         UriComponentsBuilder redirect = UriComponentsBuilder.fromPath("/compare");
         rivalIds.forEach(r -> redirect.queryParam("rivals", r));
         // 분석 성공/실패와 무관하게 결과 영역은 펼쳐 보여준다.
