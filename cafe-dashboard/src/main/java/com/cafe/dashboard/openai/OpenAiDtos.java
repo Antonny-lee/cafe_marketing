@@ -29,11 +29,14 @@ public class OpenAiDtos {
             Double positive_ratio,
             Double negative_ratio,
             String word_summary,
+            List<KeyPoint> key_points,
             List<InsightItem> insights,
             List<CompetitorComparison> competitor_comparisons
     ) {}
 
     public record InsightItem(String quote, String suggestion) {}
+
+    public record KeyPoint(String icon, String text) {}
 
     public record CompetitorComparison(String rival_store_id, String strength, String difference) {}
 }

@@ -13,6 +13,8 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Controller
 @RequiredArgsConstructor
@@ -57,16 +59,37 @@ public class LedgerController {
 
     @PostMapping("/ledger/sales/upload")
     public String uploadSales(@AuthenticationPrincipal UserDetails principal, HttpSession session,
-                               @RequestParam("file") MultipartFile file) {
+                               @RequestParam("file") MultipartFile[] files) {
         String storeId = requireStoreId(principal, session);
         UriComponentsBuilder redirect = UriComponentsBuilder.fromPath("/ledger").queryParam("view", "status");
-        try {
-            LedgerService.ImportResult result = ledgerService.importSalesFile(storeId, file);
-            redirect.queryParam("success", "매출 리포트 반영 완료: " + result.rowsImported() + "건 (" +
-                    result.from() + " ~ " + result.to() + ")");
-        } catch (Exception e) {
-            String message = e.getMessage() == null ? "업로드 처리 중 오류가 발생했습니다." : e.getMessage();
-            redirect.queryParam("error", message);
+
+        int totalRows = 0;
+        LocalDate overallFrom = null;
+        LocalDate overallTo = null;
+        List<String> failures = new ArrayList<>();
+
+        for (MultipartFile file : files) {
+            if (file.isEmpty()) continue;
+            try {
+                LedgerService.ImportResult result = ledgerService.importSalesFile(storeId, file);
+                totalRows += result.rowsImported();
+                if (overallFrom == null || result.from().isBefore(overallFrom)) overallFrom = result.from();
+                if (overallTo == null || result.to().isAfter(overallTo)) overallTo = result.to();
+            } catch (Exception e) {
+                String message = e.getMessage() == null ? "처리 중 오류가 발생했습니다." : e.getMessage();
+                failures.add(file.getOriginalFilename() + ": " + message);
+            }
+        }
+
+        if (totalRows > 0) {
+            redirect.queryParam("success", "매출 리포트 반영 완료: " + totalRows + "건 (" + overallFrom + " ~ " + overallTo + ")"
+                    + (failures.isEmpty() ? "" : " · 실패 " + failures.size() + "개 파일"));
+        }
+        if (!failures.isEmpty()) {
+            redirect.queryParam("error", String.join(" / ", failures));
+        }
+        if (totalRows == 0 && failures.isEmpty()) {
+            redirect.queryParam("error", "업로드된 파일이 없습니다.");
         }
         return "redirect:" + redirect.encode().build().toUriString();
     }

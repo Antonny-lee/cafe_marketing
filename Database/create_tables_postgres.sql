@@ -8,6 +8,7 @@
 
 -- ===== 초기화 (역순으로 DROP) =====
 DROP TABLE IF EXISTS review_insight_comparison CASCADE;
+DROP TABLE IF EXISTS review_insight_keypoint CASCADE;
 DROP TABLE IF EXISTS review_insight_item CASCADE;
 DROP TABLE IF EXISTS review_insight CASCADE;
 DROP TABLE IF EXISTS expenses CASCADE;
@@ -223,6 +224,14 @@ CREATE TABLE review_insight_item (
     suggestion   VARCHAR(500)
 );
 CREATE INDEX idx_insight_item_store ON review_insight_item(store_id);
+
+CREATE TABLE review_insight_keypoint (
+    id           BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    store_id     VARCHAR(10) NOT NULL REFERENCES review_insight(store_id),
+    icon         VARCHAR(10),
+    text         VARCHAR(200)
+);
+CREATE INDEX idx_insight_keypoint_store ON review_insight_keypoint(store_id);
 
 CREATE TABLE review_insight_comparison (
     id               BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,

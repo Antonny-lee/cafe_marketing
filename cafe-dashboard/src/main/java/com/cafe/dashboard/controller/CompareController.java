@@ -7,6 +7,7 @@ import com.cafe.dashboard.service.WordCloudService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -26,6 +27,9 @@ public class CompareController {
     private final InsightService insightService;
     private final ActiveStoreResolver activeStoreResolver;
     private final WordCloudService wordCloudService;
+
+    @Value("${kakao.map-key}")
+    private String kakaoMapKey;
 
     @GetMapping("/compare")
     public String form(@AuthenticationPrincipal UserDetails principal, HttpSession session,
@@ -48,10 +52,12 @@ public class CompareController {
         model.addAttribute("result", compareService.compare(mineId.get(), rivalIds));
         model.addAttribute("insight", insightService.getCached(mineId.get()).orElse(null));
         model.addAttribute("insightItems", insightService.getCachedItems(mineId.get()));
+        model.addAttribute("insightKeypoints", insightService.getCachedKeypoints(mineId.get()));
         model.addAttribute("comparisonsByRival", insightService.getCachedComparisons(mineId.get(), rivalIds).stream()
                 .collect(java.util.stream.Collectors.toMap(
                         com.cafe.dashboard.entity.ReviewInsightComparison::getRivalStoreId, c -> c)));
         model.addAttribute("wordCloud", wordCloudService.compute(mineId.get()));
+        model.addAttribute("kakaoMapKey", kakaoMapKey);
         return "compare";
     }
 

@@ -10,12 +10,12 @@
         .pl-strip { display:flex; align-items:center; background:var(--card); border:1px solid var(--border); border-radius:8px; padding:16px 8px; margin-bottom:18px; }
         .pl-col { flex:1; display:flex; flex-direction:column; align-items:center; gap:5px; }
         .pl-div { width:1px; height:34px; background:var(--border); flex-shrink:0; }
-        .pl-label { font-size:11.5px; color:var(--muted); display:flex; align-items:center; gap:6px; }
+        .pl-label { font-size:13px; color:var(--muted); display:flex; align-items:center; gap:6px; }
         .pl-amt { font-family:'IBM Plex Mono', monospace; font-size:15px; font-weight:700; color:var(--ink); }
         .pl-amt.down { color:var(--rust); }
         .pl-amt.up { color:var(--accent-dark); }
         .pl-amt.strong { font-size:18px; }
-        .pl-badge { font-size:10px; font-weight:700; color:#fff; background:var(--accent-dark); padding:2px 7px; border-radius:999px; margin-left:4px; }
+        .pl-badge { font-size:14px; font-weight:700; color:#fff; background:var(--accent-dark); padding:2px 7px; border-radius:999px; margin-left:4px; }
         .pl-badge.warn { background:var(--rust); }
 
         .ledger-tabs { display:flex; gap:8px; margin-bottom:20px; }
@@ -30,17 +30,17 @@
         .banner.err { background:#F3E1DA; color:var(--rust); }
 
         .sync-figure { padding:14px 0; border-top:1px dashed var(--border); border-bottom:1px dashed var(--border); margin:14px 0; }
-        .sf-label { font-size:11.5px; color:var(--muted); }
+        .sf-label { font-size:13px; color:var(--muted); }
         .sf-amt { font-family:'IBM Plex Mono', monospace; font-size:24px; font-weight:700; color:var(--accent-dark); }
 
         .field { margin-bottom:14px; }
-        .field label { display:block; font-size:12px; color:var(--muted); margin-bottom:5px; font-weight:600; }
+        .field label { display:block; font-size:13.5px; color:var(--muted); margin-bottom:5px; font-weight:600; }
         .field input, .field select {
             width:100%; padding:9px 11px; border:1px solid var(--border); border-radius:6px;
             font-family:inherit; font-size:14px; background:var(--bg);
         }
         .field-row { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px; }
-        .check-row { display:flex; align-items:center; gap:7px; font-size:12.5px; color:var(--muted); font-weight:500; }
+        .check-row { display:flex; align-items:center; gap:7px; font-size:14px; color:var(--muted); font-weight:500; }
         .submit-btn {
             width:100%; padding:12px; border:none; border-radius:6px;
             background:var(--accent-dark); color:#fff; font-weight:700; font-size:14px; cursor:pointer;
@@ -48,8 +48,8 @@
         .ledger-item { display:flex; justify-content:space-between; align-items:center; padding:12px 4px; border-bottom:1px solid var(--border); }
         .ledger-item:last-child { border-bottom:none; }
         .li-cat { font-size:13px; font-weight:600; }
-        .li-vendor { font-weight:400; color:var(--muted); font-size:11.5px; }
-        .li-date { font-size:11px; color:var(--muted); font-family:'IBM Plex Mono', monospace; }
+        .li-vendor { font-weight:400; color:var(--muted); font-size:13px; }
+        .li-date { font-size:14px; color:var(--muted); font-family:'IBM Plex Mono', monospace; }
         .li-amt { font-family:'IBM Plex Mono', monospace; font-weight:600; font-size:14px; color:var(--rust); }
         .fc-row { cursor:pointer; }
         .fc-row:hover { background:#faf8f5; }
@@ -66,27 +66,27 @@
         .expense-donut-sub { font-size:13px; color:var(--muted); }
         .pay-tag { display:inline-block; margin-left:6px; padding:1px 7px; border-radius:999px; background:#f1ece4; font-size:9.5px; font-weight:600; color:var(--muted); }
         .upload-row { display:flex; gap:8px; align-items:center; }
-        .upload-row input[type=file] { flex:1; font-size:12.5px; }
+        .upload-row input[type=file] { flex:1; font-size:14px; }
 
         .mini-bars { display:flex; align-items:flex-end; gap:12px; padding-bottom:4px; }
         .mb-col { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; }
-        .mb-val { font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--muted); margin-bottom:5px; white-space:nowrap; }
+        .mb-val { font-family:'IBM Plex Mono', monospace; font-size:13.5px; color:var(--muted); margin-bottom:5px; white-space:nowrap; }
         .mb-bar { width:100%; background:var(--border); border-radius:4px 4px 0 0; min-height:3px; }
         .mb-bar.current { background:var(--accent-dark); }
         .mb-bar.expense.current { background:var(--rust); }
-        .mb-x { font-size:11px; color:var(--muted); margin-top:8px; font-family:'IBM Plex Mono', monospace; }
+        .mb-x { font-size:14px; color:var(--muted); margin-top:8px; font-family:'IBM Plex Mono', monospace; }
 
         .daily-row { display:flex; justify-content:space-between; align-items:center; padding:9px 4px; border-bottom:1px solid var(--border); }
         .daily-row:last-child { border-bottom:none; }
-        .daily-date { font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--muted); }
+        .daily-date { font-family:'IBM Plex Mono', monospace; font-size:13.5px; color:var(--muted); }
         .daily-amt { font-family:'IBM Plex Mono', monospace; font-weight:600; font-size:13.5px; }
         .daily-src { font-size:9.5px; padding:1px 7px; border-radius:999px; background:#f1ece4; color:var(--muted); margin-left:6px; }
-        .daily-del { border:none; background:none; color:var(--rust); font-size:12px; cursor:pointer; padding:4px 6px; }
+        .daily-del { border:none; background:none; color:var(--rust); font-size:13.5px; cursor:pointer; padding:4px 6px; }
         .daily-row-extra { display:none; }
         #dailySalesList.expanded .daily-row-extra { display:flex; }
         .daily-toggle-btn {
             width:100%; margin-top:10px; padding:10px; border:1px dashed var(--border); border-radius:8px;
-            background:none; color:var(--muted); font-size:12.5px; font-weight:600; cursor:pointer;
+            background:none; color:var(--muted); font-size:14px; font-weight:600; cursor:pointer;
         }
         .daily-toggle-btn:hover { border-color:var(--accent-dark); color:var(--accent-dark); }
     </style>
@@ -126,14 +126,15 @@
     <div th:if="${view == 'status'}">
         <div class="card" style="margin-bottom:20px;">
             <h2>매출 리포트 업로드</h2>
-            <p class="muted" style="font-size:12.5px; margin-bottom:12px;">
+            <p class="muted" style="font-size:14px; margin-bottom:12px;">
                 POS에서 내보낸 매출 리포트(CSV·엑셀)를 올리면 자동으로 반영돼요. 헤더에 '날짜'와 '매출'(또는 금액) 컬럼이 있어야 합니다.
             </p>
             <form method="post" th:action="@{/ledger/sales/upload}" enctype="multipart/form-data" class="upload-row" style="margin-bottom:6px;">
-                <input type="file" name="file" accept=".csv,.xlsx,.xls" required/>
+                <input type="file" name="file" accept=".csv,.xlsx,.xls" required multiple/>
                 <button type="submit" style="padding:9px 16px; border:none; border-radius:6px; background:var(--accent); color:#fff; font-weight:700; cursor:pointer; white-space:nowrap;">업로드</button>
             </form>
-            <p class="muted" style="font-size:11px;" th:if="${overview.lastUploadInfo() != null}"
+            <p class="muted" style="font-size:14px; margin-top:-2px;">여러 달 리포트를 한 번에 올리고 싶으면 파일 선택 창에서 여러 개를 같이 선택하세요.</p>
+            <p class="muted" style="font-size:14px;" th:if="${overview.lastUploadInfo() != null}"
                th:text="'최근 업로드: ' + ${overview.lastUploadInfo()}"></p>
 
             <div class="sync-figure">
@@ -141,7 +142,7 @@
                 <div class="sf-amt" th:text="${#numbers.formatInteger(overview.monthSales(),1,'COMMA')} + '원'">0원</div>
             </div>
 
-            <p class="muted" style="font-size:12px; margin-bottom:8px;">리포트가 없는 날은 오늘 매출만 간단히 입력할 수 있어요.</p>
+            <p class="muted" style="font-size:13.5px; margin-bottom:8px;">리포트가 없는 날은 오늘 매출만 간단히 입력할 수 있어요.</p>
             <form method="post" th:action="@{/ledger/sales}" style="display:flex; gap:8px; align-items:flex-end;">
                 <div class="field" style="flex:1; margin-bottom:0;">
                     <label>날짜</label>
@@ -157,7 +158,7 @@
 
         <div class="card" style="margin-bottom:20px;">
             <h2>이번 달 일별 매출 내역</h2>
-            <p class="muted" style="font-size:12.5px;" th:if="${#lists.isEmpty(dailySales)}">아직 등록된 매출이 없어요.</p>
+            <p class="muted" style="font-size:14px;" th:if="${#lists.isEmpty(dailySales)}">아직 등록된 매출이 없어요.</p>
             <div id="dailySalesList">
                 <div th:each="d, iter : ${dailySales}" class="daily-row" th:classappend="${iter.index >= 5} ? 'daily-row-extra' : ''">
                     <div>
@@ -180,7 +181,7 @@
 
         <div class="card">
             <h2>이번 달 지출 비중</h2>
-            <p class="muted" style="font-size:12.5px;" th:if="${#lists.isEmpty(overview.categoryBreakdown())}">아직 등록된 지출이 없어요.</p>
+            <p class="muted" style="font-size:14px;" th:if="${#lists.isEmpty(overview.categoryBreakdown())}">아직 등록된 지출이 없어요.</p>
             <div th:if="${!#lists.isEmpty(overview.categoryBreakdown())}">
                 <div class="expense-donut-wrap">
                     <svg id="expenseDonutSvg" viewBox="0 0 200 200"></svg>
@@ -307,7 +308,7 @@
 
         <div class="card">
             <h2>등록된 고정비</h2>
-            <p class="muted" style="font-size:12.5px;" th:if="${#lists.isEmpty(fixedCosts)}">등록된 고정비가 없어요.</p>
+            <p class="muted" style="font-size:14px;" th:if="${#lists.isEmpty(fixedCosts)}">등록된 고정비가 없어요.</p>
             <div th:each="fc, iter : ${fixedCosts}">
                 <div class="ledger-item fc-row" th:attr="onclick=|toggleFcEdit(${iter.index})|">
                     <div>
@@ -373,7 +374,7 @@
     <div th:if="${view == 'history'}">
         <div class="card">
             <h2>최근 지출 내역</h2>
-            <p class="muted" style="font-size:12.5px;" th:if="${expenses.empty}">아직 등록된 지출이 없어요.</p>
+            <p class="muted" style="font-size:14px;" th:if="${expenses.empty}">아직 등록된 지출이 없어요.</p>
             <div th:each="e : ${expenses.content}" class="ledger-item">
                 <div>
                     <span class="li-cat" th:text="${e.category}">카테고리</span>
@@ -396,7 +397,7 @@
     <div th:if="${view == 'monthly'}">
         <div class="card" style="margin-bottom:18px;">
             <h2>월별 매출 추이</h2>
-            <p class="muted" style="font-size:12.5px;" th:if="${#lists.isEmpty(monthlyComparison)}">아직 데이터가 없어요.</p>
+            <p class="muted" style="font-size:14px;" th:if="${#lists.isEmpty(monthlyComparison)}">아직 데이터가 없어요.</p>
             <div class="mini-bars" th:unless="${#lists.isEmpty(monthlyComparison)}">
                 <div class="mb-col" th:each="m, iter : ${monthlyComparison}">
                     <span class="mb-val" th:text="${#numbers.formatInteger(m.sales(),1,'COMMA')}"></span>
@@ -409,7 +410,7 @@
 
         <div class="card" style="margin-bottom:18px;">
             <h2>월별 지출 추이</h2>
-            <p class="muted" style="font-size:12.5px;" th:if="${#lists.isEmpty(monthlyComparison)}">아직 데이터가 없어요.</p>
+            <p class="muted" style="font-size:14px;" th:if="${#lists.isEmpty(monthlyComparison)}">아직 데이터가 없어요.</p>
             <div class="mini-bars" th:unless="${#lists.isEmpty(monthlyComparison)}">
                 <div class="mb-col" th:each="m, iter : ${monthlyComparison}">
                     <span class="mb-val" th:text="${#numbers.formatInteger(m.expense(),1,'COMMA')}"></span>

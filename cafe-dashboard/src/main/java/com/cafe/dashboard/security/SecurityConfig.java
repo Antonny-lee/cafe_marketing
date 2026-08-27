@@ -33,9 +33,15 @@ public class SecurityConfig {
                         .loginProcessingUrl("/login")
                         .defaultSuccessUrl("/biz-auth", true)
                         .permitAll())
+                // 사용자가 직접 로그아웃하기 전까지는 재로그인 없이 유지되도록 자동 로그인 쿠키를 항상 발급한다.
+                .rememberMe(remember -> remember
+                        .key("cafe-dashboard-remember-me")
+                        .tokenValiditySeconds(60 * 60 * 24 * 365 * 10)
+                        .alwaysRemember(true))
                 .logout(logout -> logout
                         .logoutUrl("/logout")
                         .logoutSuccessUrl("/login?logout")
+                        .deleteCookies("remember-me")
                         .permitAll());
         return http.build();
     }

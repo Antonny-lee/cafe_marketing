@@ -9,35 +9,54 @@
     <style>
         .chat-card { display: flex; flex-direction: column; height: 62vh; padding: 0; overflow: hidden; }
         .chat-log { flex: 1; overflow-y: auto; padding: 20px 22px; display: flex; flex-direction: column; gap: 14px; }
-        .chat-empty { color: var(--muted); font-size: 13px; text-align: center; margin-top: 40px; line-height: 1.7; }
+        .chat-empty { color: var(--muted); font-size: 14.5px; text-align: center; margin-top: 40px; line-height: 1.8; }
         .chat-row { display: flex; }
         .chat-row.user { justify-content: flex-end; }
         .chat-bubble {
-            max-width: 72%; padding: 12px 15px; border-radius: 12px; font-size: 13.5px; line-height: 1.65;
-            white-space: pre-wrap; word-break: break-word;
+            max-width: 78%; padding: 16px 19px; border-radius: 12px; font-size: 16px; line-height: 2;
+            letter-spacing: 0; white-space: pre-wrap; word-break: break-word;
         }
         .chat-row.user .chat-bubble { background: var(--accent-dark); color: #fff; border-bottom-right-radius: 3px; }
         .chat-row.bot .chat-bubble { background: var(--card); border: 1px solid var(--border); border-bottom-left-radius: 3px; }
         .chat-row.bot .chat-bubble.pending { color: var(--muted); font-style: italic; }
-        .chat-bubble p { margin: 0 0 10px; }
+        .chat-heading {
+            font-family: 'Noto Serif KR', serif; font-weight: 700; font-size: 17px; color: var(--accent-dark);
+            margin: 28px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border);
+        }
+        .chat-heading:first-child { margin-top: 0; }
+        .chat-bubble p { margin: 0 0 18px; }
         .chat-bubble p:last-child { margin-bottom: 0; }
         .chat-bubble strong { color: var(--accent-dark); font-weight: 700; }
-        .chat-bubble ol, .chat-bubble ul { margin: 0 0 10px; padding-left: 20px; }
+        .chat-bubble mark {
+            background: #FFF1A6; color: var(--ink); padding: 1px 3px; border-radius: 3px;
+            box-decoration-break: clone; -webkit-box-decoration-break: clone;
+        }
+        .chat-bubble ol, .chat-bubble ul { margin: 0 0 18px; padding-left: 22px; }
         .chat-bubble ol:last-child, .chat-bubble ul:last-child { margin-bottom: 0; }
-        .chat-bubble li { margin-bottom: 5px; }
+        .chat-bubble li { margin-bottom: 14px; }
         .chat-bubble li:last-child { margin-bottom: 0; }
         .chat-form { display: flex; gap: 10px; padding: 14px 18px; border-top: 1px solid var(--border); background: var(--card); }
         .chat-form textarea {
             flex: 1; resize: none; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
-            font-family: inherit; font-size: 13.5px; line-height: 1.5; min-height: 42px; max-height: 120px;
+            font-family: inherit; font-size: 15px; line-height: 1.5; min-height: 42px; max-height: 120px;
         }
         .chat-form button {
             padding: 0 20px; border: none; border-radius: 8px; background: var(--accent);
-            color: #fff; font-weight: 600; font-size: 13.5px; cursor: pointer;
+            color: #fff; font-weight: 600; font-size: 15px; cursor: pointer;
         }
         .chat-form button:disabled { opacity: 0.5; cursor: default; }
         .chat-hint { font-size: 11.5px; color: var(--muted); margin-top: 8px; }
+        .highlight-btn {
+            position: fixed; display: none; z-index: 300; transform: translate(-50%, -100%);
+            padding: 6px 12px; border: none; border-radius: 999px; background: var(--ink); color: #fff;
+            font-size: 12.5px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 14px rgba(36,29,20,0.3);
+            white-space: nowrap;
+        }
+        .highlight-btn.open { display: block; }
+        .chat-bubble mark.user-mark { background: #FFE066; }
     </style>
+
+    <button type="button" class="highlight-btn" id="highlightBtn">🖍 형광펜 표시</button>
 
     <div class="card chat-card">
         <div class="chat-log" id="chatLog">
@@ -85,7 +104,9 @@
             let listType = null;
             let paraBuf = [];
 
-            const inline = (s) => s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            const inline = (s) => s
+                .replace(/==(.+?)==/g, '<mark>$1</mark>')
+                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
             const flushPara = () => {
                 if (paraBuf.length) { html += '<p>' + paraBuf.join('<br>') + '</p>'; paraBuf = []; }
             };
@@ -95,10 +116,15 @@
 
             for (const raw of lines) {
                 const line = raw.trim();
+                const headingMatch = line.match(/^#{1,6}\s+(.*)$/);
                 const numMatch = line.match(/^(\d+)[.)]\s+(.*)$/);
                 const bulletMatch = line.match(/^[-*]\s+(.*)$/);
 
-                if (numMatch) {
+                if (headingMatch) {
+                    closeList();
+                    flushPara();
+                    html += '<div class="chat-heading">' + inline(headingMatch[1]) + '</div>';
+                } else if (numMatch) {
                     flushPara();
                     if (listType !== 'ol') { closeList(); html += '<ol>'; listType = 'ol'; }
                     html += '<li>' + inline(numMatch[2]) + '</li>';
@@ -107,7 +133,8 @@
                     if (listType !== 'ul') { closeList(); html += '<ul>'; listType = 'ul'; }
                     html += '<li>' + inline(bulletMatch[1]) + '</li>';
                 } else if (line === '') {
-                    closeList();
+                    // 리스트 항목 사이의 빈 줄만으로는 목록을 끊지 않는다 - AI 응답이 각 항목 사이에
+                    // 줄바꿈을 넣어도 <ol>이 번호를 1부터 다시 매기지 않고 이어지도록.
                     flushPara();
                 } else {
                     closeList();
@@ -176,6 +203,59 @@
                 input.focus();
             }
         });
+
+        // 사장님이 챗봇 답변 중 중요한 부분을 직접 드래그로 선택해서 형광펜 표시할 수 있게 한다.
+        const highlightBtn = document.getElementById('highlightBtn');
+        let pendingRange = null;
+
+        function hideHighlightBtn() {
+            highlightBtn.classList.remove('open');
+            pendingRange = null;
+        }
+
+        document.addEventListener('mouseup', () => {
+            setTimeout(() => {
+                const sel = window.getSelection();
+                if (!sel || sel.isCollapsed || sel.rangeCount === 0 || sel.toString().trim() === '') {
+                    hideHighlightBtn();
+                    return;
+                }
+                const range = sel.getRangeAt(0);
+                const anchorEl = range.commonAncestorContainer.nodeType === 1
+                    ? range.commonAncestorContainer
+                    : range.commonAncestorContainer.parentElement;
+                const bubble = anchorEl ? anchorEl.closest('.chat-row.bot .chat-bubble') : null;
+                if (!bubble) {
+                    hideHighlightBtn();
+                    return;
+                }
+                pendingRange = range.cloneRange();
+                const rect = range.getBoundingClientRect();
+                highlightBtn.style.left = (rect.left + rect.width / 2) + 'px';
+                highlightBtn.style.top = (rect.top - 8) + 'px';
+                highlightBtn.classList.add('open');
+            }, 0);
+        });
+
+        // 버튼 클릭 시 텍스트 선택이 풀리지 않도록 mousedown 단계에서 막는다.
+        highlightBtn.addEventListener('mousedown', (e) => e.preventDefault());
+
+        highlightBtn.addEventListener('click', () => {
+            if (!pendingRange) return;
+            const mark = document.createElement('mark');
+            mark.className = 'user-mark';
+            try {
+                pendingRange.surroundContents(mark);
+            } catch (e) {
+                const frag = pendingRange.extractContents();
+                mark.appendChild(frag);
+                pendingRange.insertNode(mark);
+            }
+            window.getSelection().removeAllRanges();
+            hideHighlightBtn();
+        });
+
+        document.addEventListener('scroll', hideHighlightBtn, true);
     </script>
 </main>
 </body>

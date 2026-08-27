@@ -14,19 +14,19 @@
         .store-pill b { color:var(--ink); font-weight:700; }
         .store-pill .arrow { color:var(--muted); }
 
-        .today-date { font-family:'IBM Plex Mono', monospace; font-size:11.5px; color:var(--muted); margin-bottom:6px; }
+        .today-date { font-family:'IBM Plex Mono', monospace; font-size:13px; color:var(--muted); margin-bottom:6px; }
         .today-greeting { font-family:'Noto Serif KR', serif; font-weight:700; font-size:19px; line-height:1.4; margin-bottom:18px; }
-        .today-label { font-size:12.5px; color:var(--muted); margin-bottom:6px; }
+        .today-label { font-size:14px; color:var(--muted); margin-bottom:6px; }
         .today-amt { font-family:'IBM Plex Mono', monospace; font-size:28px; font-weight:700; color:var(--ink); }
         .today-compare {
             margin:12px 0 0; padding-top:10px; border-top:1px dashed var(--border);
             display:flex; align-items:baseline; gap:8px;
         }
-        .tcl-label { font-size:12px; color:var(--muted); }
+        .tcl-label { font-size:13.5px; color:var(--muted); }
         .tcl-val { font-family:'IBM Plex Mono', monospace; font-size:13px; font-weight:700; }
         .tcl-val.up { color:#C0392B; }
         .tcl-val.down { color:#2F5FA8; }
-        .today-sub { font-size:12px; color:var(--muted); margin-top:10px; padding-top:10px; border-top:1px dashed var(--border); }
+        .today-sub { font-size:13.5px; color:var(--muted); margin-top:10px; padding-top:10px; border-top:1px dashed var(--border); }
 
         .receipt-card { position:relative; }
         .receipt-card::before, .receipt-card::after {
@@ -55,7 +55,7 @@
         .pace-delta-val { font-family:'IBM Plex Mono', monospace; font-size:15px; font-weight:700; }
         .pace-delta-val.up { color:#C0392B; }
         .pace-delta-val.down { color:#2F5FA8; }
-        .pace-delta-label { font-size:12px; color:var(--muted); }
+        .pace-delta-label { font-size:13.5px; color:var(--muted); }
         .pace-legend-item { cursor:pointer; padding:2px 7px; border-radius:6px; transition:background .12s ease, opacity .12s ease; user-select:none; }
         .pace-legend-item:hover { background:#F1ECE4; }
         .pace-legend-item.dim { opacity:0.4; }
@@ -104,7 +104,7 @@
 
     <div class="card" style="margin-bottom:18px;">
         <h2>이번 달 페이스</h2>
-        <p class="muted" style="font-size:12.5px; margin-bottom:4px;">이대로면 이번 달 예상 매출</p>
+        <p class="muted" style="font-size:14px; margin-bottom:4px;">이대로면 이번 달 예상 매출</p>
         <div class="pace-amt" th:text="'약 ' + ${#numbers.formatInteger(home.projectedMonthSales(),1,'COMMA')} + '원'">0원</div>
 
         <div class="pace-delta" th:if="${home.paceChangePercent() != null}">

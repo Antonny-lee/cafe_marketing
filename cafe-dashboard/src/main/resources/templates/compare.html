@@ -17,11 +17,14 @@
                      th:text="${result.mine().store().name}"></div>
             </div>
             <div class="field">
-                <label>비교할 경쟁 매장 (최대 3곳, Ctrl/Cmd 클릭으로 다중 선택)</label>
-                <select name="rivals" multiple>
-                    <option th:each="s : ${stores}" th:value="${s.storeId}" th:text="${s.name}"
-                            th:selected="${selectedRivals.contains(s.storeId)}"></option>
-                </select>
+                <label>비교할 경쟁 매장 (최대 3곳)</label>
+                <div class="rival-checklist" id="rivalChecklist">
+                    <label class="rival-check-item" th:each="s : ${stores}">
+                        <input type="checkbox" name="rivals" th:value="${s.storeId}"
+                               th:checked="${selectedRivals.contains(s.storeId)}"/>
+                        <span th:text="${s.name}">매장명</span>
+                    </label>
+                </div>
             </div>
             <button type="submit" style="padding:10px 20px; border:none; border-radius:6px; background:var(--accent-dark); color:#fff; font-weight:700; cursor:pointer;">
                 비교하기
@@ -29,18 +32,36 @@
         </form>
     </div>
 
+    <script>
+        (function () {
+            const checklist = document.getElementById('rivalChecklist');
+            const checkboxes = Array.from(checklist.querySelectorAll('input[type=checkbox]'));
+            const MAX = 3;
+
+            function refreshDisabled() {
+                const checkedCount = checkboxes.filter(cb => cb.checked).length;
+                checkboxes.forEach(cb => {
+                    if (!cb.checked) cb.disabled = checkedCount >= MAX;
+                });
+            }
+
+            checkboxes.forEach(cb => cb.addEventListener('change', refreshDisabled));
+            refreshDisabled();
+        })();
+    </script>
+
     <div th:if="${result != null}">
         <div class="card" style="margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap;">
             <div>
                 <h2 style="margin-bottom:4px;">AI 리뷰 분석</h2>
-                <p class="muted" style="font-size:12.5px; margin:0;" th:if="${insight == null}">
-                    아직 분석 전이에요. 아래 버튼을 누르면 우리 매장의 최신 리뷰를 먼저 수집한 뒤, 긍정/부정 비율·개선 힌트·워드클라우드 해석까지 한 번에 나와요.
+                <p class="muted" style="font-size:14px; margin:0;" th:if="${insight == null}">
+                    아직 분석 전이에요. 아래 버튼을 누르면 지금까지 쌓인 리뷰 데이터로 긍정/부정 비율·개선 힌트·워드클라우드 해석이 한 번에 나와요.
                 </p>
-                <p class="muted" style="font-size:12.5px; margin:0;" th:if="${insight != null}">
+                <p class="muted" style="font-size:14px; margin:0;" th:if="${insight != null}">
                     마지막 분석 · <span th:text="${#temporals.format(insight.analyzedAt, 'MM.dd HH:mm')}"></span>
                     (리뷰 <span th:text="${insight.analyzedCount}"></span>건 기준)
                 </p>
-                <p th:if="${analyzeError != null}" style="color:#A8462E; font-size:12.5px; margin:4px 0 0;" th:text="'분석 실패: ' + ${analyzeError}"></p>
+                <p th:if="${analyzeError != null}" style="color:#A8462E; font-size:14px; margin:4px 0 0;" th:text="'분석 실패: ' + ${analyzeError}"></p>
             </div>
             <div style="text-align:right;">
                 <form id="analyzeForm" method="post" th:action="@{/compare/analyze}">
@@ -70,7 +91,7 @@
             }
             @keyframes wait-spin { to { transform: rotate(360deg); } }
             .wait-modal-title { font-family:'Noto Serif KR', serif; font-weight:700; font-size:16px; margin-bottom:8px; }
-            .wait-modal-sub { font-size:12.5px; color:var(--muted); line-height:1.6; min-height:2.6em; }
+            .wait-modal-sub { font-size:14px; color:var(--muted); line-height:1.6; min-height:2.6em; }
         </style>
 
         <div id="analyzeModal" class="wait-modal-overlay">
@@ -81,59 +102,18 @@
             </div>
         </div>
 
-        <script th:inline="javascript">
+        <script>
             (function () {
                 const btn = document.getElementById('analyzeBtn');
                 const form = document.getElementById('analyzeForm');
                 const modal = document.getElementById('analyzeModal');
                 const modalStatus = document.getElementById('analyzeModalStatus');
-                const storeId = /*[[${selectedMine}]]*/ '';
-                let polling = null;
-                let pollCount = 0;
-                const runningMessages = [
-                    '네이버 지도에서 최신 리뷰를 가져오고 있어요...',
-                    '새 리뷰와 태그를 정리하고 있어요...',
-                    '데이터베이스에 반영하고 있어요...'
-                ];
 
-                async function poll() {
-                    try {
-                        const res = await fetch('/stores/' + storeId + '/refresh/status');
-                        if (!res.ok) return;
-                        const data = await res.json();
-                        if (data.status === 'RUNNING') {
-                            modalStatus.textContent = runningMessages[Math.min(pollCount, runningMessages.length - 1)];
-                            pollCount++;
-                        } else if (data.status === 'DONE') {
-                            clearInterval(polling);
-                            modalStatus.textContent = '최신 리뷰 반영 완료 (새 리뷰 ' + (data.newReviews ?? 0) + '건) — AI가 분석하고 있어요...';
-                            form.submit();
-                        } else if (data.status === 'ERROR') {
-                            clearInterval(polling);
-                            modalStatus.textContent = '최신 리뷰 수집에 실패했어요 — 기존 데이터로 분석할게요...';
-                            form.submit();
-                        }
-                    } catch (e) { /* 다음 폴링에서 재시도 */ }
-                }
-
-                btn.addEventListener('click', async () => {
+                btn.addEventListener('click', () => {
                     btn.disabled = true;
                     modal.classList.add('open');
-                    modalStatus.textContent = '최신 리뷰 수집 시작 중...';
-                    try {
-                        const res = await fetch('/stores/' + storeId + '/refresh', { method: 'POST' });
-                        const data = await res.json();
-                        if (data.status === 'CURRENT') {
-                            modalStatus.textContent = (data.errorMessage || '지금 있는 최신 데이터로 분석할게요.');
-                            form.submit();
-                            return;
-                        }
-                        poll();
-                        polling = setInterval(poll, 2500);
-                    } catch (e) {
-                        modalStatus.textContent = '수집 요청 실패 — 기존 데이터로 분석할게요...';
-                        form.submit();
-                    }
+                    modalStatus.textContent = 'AI가 리뷰를 분석하고 있어요...';
+                    form.submit();
                 });
             })();
         </script>
@@ -189,18 +169,55 @@
             </div>
         </div>
 
+        <style>
+            .peer-dist-track { position: relative; height: 2px; background: var(--border); margin: 0 7px 10px; }
+            .peer-dist-avg-tick {
+                position: absolute; top: -6px; width: 2px; height: 14px; background: var(--muted);
+                transform: translateX(-50%);
+            }
+            .peer-dist-dot {
+                position: absolute; top: -7px; width: 16px; height: 16px; border-radius: 50%;
+                background: #2F5FA8; box-shadow: 0 0 0 4px rgba(47,95,168,0.15); transform: translateX(-50%);
+            }
+            .peer-dist-labels { position: relative; height: 18px; margin-bottom: 18px; }
+            .peer-dist-edge { position: absolute; font-size: 13px; color: var(--muted); }
+            .peer-dist-edge.low { left: 0; }
+            .peer-dist-edge.high { right: 0; }
+            .peer-dist-avg-label {
+                position: absolute; transform: translateX(-50%);
+                font-size: 13px; font-weight: 600; color: var(--ink); white-space: nowrap;
+            }
+            .peer-dist-summary { text-align: center; font-size: 15px; font-weight: 700; margin: 0; }
+            .peer-dist-summary b { font-family: 'IBM Plex Mono', monospace; color: #2F5FA8; }
+        </style>
+
         <div class="card" style="margin-bottom:18px;">
             <h2>동네 카페 평균 대비</h2>
-            <table>
-                <tr><td class="muted">우리 매장 리뷰 수</td><td th:text="${result.peerStats().myReviewCount()} + '개'"></td></tr>
-                <tr><td class="muted">크롤링 매장 <span th:text="${result.peerStats().totalStores()}"></span>곳 평균</td>
-                    <td th:text="${#numbers.formatDecimal(result.peerStats().avgReviewCount(),1,1)} + '개'"></td></tr>
-            </table>
-            <div class="peer-badge">동네 카페 <span th:text="${result.peerStats().totalStores()}"></span>곳 중
-                상위 <span th:text="${100 - result.peerStats().percentileRank()}"></span>%</div>
+            <p class="muted" style="font-size:13px; margin:-6px 0 22px;">
+                동네 카페 <span th:text="${result.peerStats().totalStores()}"></span>곳 리뷰 수 분포
+            </p>
+
+            <div class="peer-dist-track">
+                <div class="peer-dist-avg-tick" th:style="'left:' + ${result.peerStats().avgPercentile()} + '%'"></div>
+                <div class="peer-dist-dot" th:style="'left:' + ${result.peerStats().percentileRank()} + '%'"></div>
+            </div>
+            <div class="peer-dist-labels">
+                <span class="peer-dist-edge low">낮음</span>
+                <span class="peer-dist-avg-label" th:style="'left:' + ${result.peerStats().avgPercentile()} + '%'"
+                      th:text="'평균 ' + ${#numbers.formatDecimal(result.peerStats().avgReviewCount(),1,1)} + '개'"></span>
+                <span class="peer-dist-edge high">높음</span>
+            </div>
+
+            <p class="peer-dist-summary">
+                우리 매장 <b th:text="${result.peerStats().myReviewCount()} + '개'"></b> —
+                상위 <b th:text="${100 - result.peerStats().percentileRank()} + '%'"></b>
+                <span class="muted" style="font-weight:500;">
+                    (<span th:text="${result.peerStats().totalStores()}"></span>곳 중 <b th:text="${result.peerStats().rank()} + '위'"></b>)
+                </span>
+            </p>
         </div>
 
-        <div style="margin-bottom:18px;" th:replace="~{fragments/layout :: wordcloud(${wordCloud}, ${insight != null ? insight.wordSummary : null})}"></div>
+        <div style="margin-bottom:18px;" th:replace="~{fragments/layout :: wordcloud(${wordCloud}, ${insight != null ? insight.wordSummary : null}, ${insightKeypoints})}"></div>
 
         <div class="card" style="margin-bottom:18px;" th:if="${insight != null}">
             <div class="insight-card-head">
@@ -224,7 +241,7 @@
         <div class="card" style="margin-bottom:18px;" th:if="${!#lists.isEmpty(result.mapMarkers)}">
             <h2>경쟁사 위치</h2>
             <div id="compareMap" style="height:340px; border-radius:8px;"></div>
-            <p class="muted" style="font-size:11px; margin-top:8px;">네이버 지도에서 수집한 실제 좌표를 사용했어요.</p>
+            <p class="muted" style="font-size:12.5px; margin-top:8px;">네이버 지도에서 수집한 실제 좌표를 사용했어요.</p>
         </div>
 
         <div th:if="${!#lists.isEmpty(result.rivals())}">
@@ -241,7 +258,7 @@
                             <span class="compA-count">· 리뷰 <span th:text="${r.reviewCount()}"></span>개</span></span>
                     </div>
                 </div>
-                <div class="kw-cloud" style="margin-bottom:12px;" th:if="${!#lists.isEmpty(r.topTags())}">
+                <div class="kw-cloud compact" style="margin-bottom:12px;" th:if="${!#lists.isEmpty(r.topTags())}">
                     <span class="kw-chip" th:each="tag, iter : ${r.topTags()}" th:classappend="${iter.index < 3} ? 'kw-top' : ''">
                         <span th:text="${tag.id.tagText}">키워드</span>
                         <span class="kw-n" th:text="${tag.mentionCount}">0</span>
@@ -258,7 +275,7 @@
 
         <div th:if="${!#lists.isEmpty(result.rivals())}">
             <h2 class="section-title">AI 경쟁사 분석</h2>
-            <p class="muted" style="font-size:12.5px; margin:-6px 0 14px;" th:if="${#maps.isEmpty(comparisonsByRival)}">
+            <p class="muted" style="font-size:14px; margin:-6px 0 14px;" th:if="${#maps.isEmpty(comparisonsByRival)}">
                 단순 태그 개수 비교가 아니라, 실제 데이터를 근거로 각 경쟁 매장의 강점과 우리 매장과의 차이점을 AI가 분석해드려요.
                 위쪽 "AI로 분석하기" 버튼을 누르면 채워집니다.
             </p>
@@ -278,16 +295,16 @@
                         <div class="gap-text" th:text="${comparisonsByRival.get(r.store().storeId).difference}"></div>
                     </div>
                 </div>
-                <p class="muted" style="font-size:12px; margin:0;" th:if="${comparisonsByRival.get(r.store().storeId) == null}">아직 분석 전이에요.</p>
+                <p class="muted" style="font-size:13.5px; margin:0;" th:if="${comparisonsByRival.get(r.store().storeId) == null}">아직 분석 전이에요.</p>
             </div>
         </div>
 
         <div class="card" style="margin-bottom:18px;" th:if="${!#lists.isEmpty(result.tagComparison())}">
             <h2>강점 키워드 비교 <span class="badge ours" style="margin-left:8px;">우리 매장 기준 TOP 5</span></h2>
-            <p class="muted" style="font-size:11.5px; margin:-4px 0 14px;">
+            <p class="muted" style="font-size:13px; margin:-4px 0 14px;">
                 각 키워드마다 비교 매장 중 최다 언급 건수를 100%로 놓고 상대 비율로 그렸어요. 정확한 건수는 매장 카드에서 확인하세요.
             </p>
-            <div id="radarLegend" class="radar-legend" style="display:flex; gap:14px; flex-wrap:wrap; margin-bottom:14px; font-size:12px;">
+            <div id="radarLegend" class="radar-legend" style="display:flex; gap:14px; flex-wrap:wrap; margin-bottom:14px; font-size:13.5px;">
                 <span th:each="bar, iter : ${result.tagComparison()[0].bars}"
                       th:attr="data-series=${bar.seriesIndex}"
                       style="display:flex; align-items:center; gap:6px; color:var(--muted); cursor:pointer; transition:opacity .15s;">
@@ -295,7 +312,7 @@
                     <span th:text="${bar.storeName} + (${bar.mine} ? ' (우리)' : '')"></span>
                 </span>
             </div>
-            <p class="muted" style="font-size:11px; margin:-8px 0 4px;">오각형 면(또는 위 범례)을 클릭하면 해당 매장이 강조돼요. 여러 매장을 눌러 동시에 강조할 수 있고, 다시 클릭하면 그 매장만 원래대로 돌아갑니다.</p>
+            <p class="muted" style="font-size:12.5px; margin:-8px 0 4px;">오각형 면(또는 위 범례)을 클릭하면 해당 매장이 강조돼요. 여러 매장을 눌러 동시에 강조할 수 있고, 다시 클릭하면 그 매장만 원래대로 돌아갑니다.</p>
             <div style="position:relative; display:flex; justify-content:center;">
                 <svg id="tagRadar" width="320" height="300" viewBox="0 0 320 300"></svg>
                 <div id="radarTooltip" class="radar-tooltip"></div>
@@ -305,7 +322,7 @@
         <style>
             .radar-tooltip {
                 position:absolute; pointer-events:none; background:var(--ink); color:var(--bg);
-                font-size:11.5px; font-weight:600; padding:6px 10px; border-radius:6px;
+                font-size:13px; font-weight:600; padding:6px 10px; border-radius:6px;
                 white-space:nowrap; opacity:0; transition:opacity .08s ease; z-index:20;
                 transform:translate(-50%, -130%);
             }
@@ -322,7 +339,7 @@
             .radar-vtx.s2 { fill: #B98A2E; }
             .radar-vtx.s3 { fill: #4A6FA5; }
             .radar-grid { fill: none; stroke: var(--border); stroke-width: 1; }
-            .radar-axis-label { font-family: 'Pretendard', sans-serif; font-size: 11.5px; fill: var(--ink); font-weight: 600; }
+            .radar-axis-label { font-family: 'Pretendard', sans-serif; font-size: 13px; fill: var(--ink); font-weight: 600; }
         </style>
 
         <script th:if="${!#lists.isEmpty(result.tagComparison())}" th:inline="javascript">
@@ -427,7 +444,7 @@
         </script>
 
         <div class="card" th:if="${!#lists.isEmpty(result.mine().sampleReviews())}">
-            <h2>실제 리뷰 <span class="rank-of muted" style="font-weight:400; font-size:12px;">(최근 <span th:text="${#lists.size(result.mine().sampleReviews())}"></span>건)</span></h2>
+            <h2>실제 리뷰 <span class="rank-of muted" style="font-weight:400; font-size:13.5px;">(최근 <span th:text="${#lists.size(result.mine().sampleReviews())}"></span>건)</span></h2>
             <div class="review-list">
                 <div class="review-card" th:each="rv : ${result.mine().sampleReviews()}">
                     <div class="rc-top">
@@ -501,14 +518,14 @@
                 </div>
 
                 <div class="md-section-label" th:if="${!#lists.isEmpty(r.topTags())}">주요 리뷰 키워드</div>
-                <div class="kw-cloud" style="margin-bottom:12px;" th:if="${!#lists.isEmpty(r.topTags())}">
+                <div class="kw-cloud compact" style="margin-bottom:12px;" th:if="${!#lists.isEmpty(r.topTags())}">
                     <span class="kw-chip" th:each="tag, iter : ${r.topTags()}" th:classappend="${iter.index < 3} ? 'kw-top' : ''">
                         <span th:text="${tag.id.tagText}">키워드</span>
                         <span class="kw-n" th:text="${tag.mentionCount}">0</span>
                     </span>
                 </div>
 
-                <div style="margin-top:18px;" th:replace="~{fragments/layout :: wordcloud(${r.wordCloud()}, null)}"></div>
+                <div style="margin-top:18px;" th:replace="~{fragments/layout :: wordcloud(${r.wordCloud()}, null, null)}"></div>
             </div>
         </div>
     </div>
@@ -526,39 +543,38 @@
 </script>
 
 <th:block th:if="${result != null and !#lists.isEmpty(result.mapMarkers)}">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script th:attr="src=@{'https://dapi.kakao.com/v2/maps/sdk.js'(appkey=${kakaoMapKey},autoload=false)}"></script>
 <script th:inline="javascript">
     const markers = /*[[${result.mapMarkers()}]]*/ [];
     const center = markers.find(m => m.mine) || markers[0];
-    const map = L.map('compareMap', {
-        scrollWheelZoom: true,
-        dragging: true,
-        touchZoom: true,
-        doubleClickZoom: true,
-        boxZoom: true,
-        keyboard: true
-    }).setView([center.lat, center.lng], 16);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-        subdomains: 'abcd',
-        maxZoom: 19
-    }).addTo(map);
 
-    const letters = ['A', 'B', 'C'];
-    let rivalIdx = 0;
-    markers.forEach(m => {
-        const label = m.mine ? '★' : letters[rivalIdx++];
-        const seriesClass = m.mine ? 'mine' : ('s' + rivalIdx);
-        const icon = L.divIcon({
-            className: '',
-            html: '<div class="map-badge ' + seriesClass + '" style="cursor:pointer;">' + label + '</div>',
-            iconSize: m.mine ? [32, 32] : [26, 26],
-            iconAnchor: m.mine ? [16, 16] : [13, 13]
+    kakao.maps.load(function () {
+        const map = new kakao.maps.Map(document.getElementById('compareMap'), {
+            center: new kakao.maps.LatLng(center.lat, center.lng),
+            level: 4
         });
-        const marker = L.marker([m.lat, m.lng], { icon }).addTo(map);
-        marker.bindTooltip(m.name + (m.mine ? ' (우리)' : ''), { permanent: false });
-        marker.on('click', () => { window.location.href = '/stores/' + m.storeId; });
+        map.addControl(new kakao.maps.ZoomControl(), kakao.maps.ControlPosition.RIGHT);
+
+        const letters = ['A', 'B', 'C'];
+        let rivalIdx = 0;
+        markers.forEach(m => {
+            const label = m.mine ? '★' : letters[rivalIdx++];
+            const seriesClass = m.mine ? 'mine' : ('s' + rivalIdx);
+            const el = document.createElement('div');
+            el.className = 'map-badge ' + seriesClass;
+            el.style.cursor = 'pointer';
+            el.textContent = label;
+            el.title = m.name + (m.mine ? ' (우리)' : '');
+            el.addEventListener('click', () => { window.location.href = '/stores/' + m.storeId; });
+
+            new kakao.maps.CustomOverlay({
+                map: map,
+                position: new kakao.maps.LatLng(m.lat, m.lng),
+                content: el,
+                yAnchor: 0.5,
+                xAnchor: 0.5
+            });
+        });
     });
 </script>
 </th:block>

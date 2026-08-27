@@ -4,10 +4,12 @@ import com.cafe.dashboard.entity.Review;
 import com.cafe.dashboard.entity.ReviewInsight;
 import com.cafe.dashboard.entity.ReviewInsightComparison;
 import com.cafe.dashboard.entity.ReviewInsightItem;
+import com.cafe.dashboard.entity.ReviewInsightKeypoint;
 import com.cafe.dashboard.openai.OpenAiClient;
 import com.cafe.dashboard.openai.OpenAiDtos;
 import com.cafe.dashboard.repository.ReviewInsightComparisonRepository;
 import com.cafe.dashboard.repository.ReviewInsightItemRepository;
+import com.cafe.dashboard.repository.ReviewInsightKeypointRepository;
 import com.cafe.dashboard.repository.ReviewInsightRepository;
 import com.cafe.dashboard.repository.ReviewRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -34,6 +36,7 @@ public class InsightService {
     private final ReviewRepository reviewRepository;
     private final ReviewInsightRepository insightRepository;
     private final ReviewInsightItemRepository insightItemRepository;
+    private final ReviewInsightKeypointRepository insightKeypointRepository;
     private final ReviewInsightComparisonRepository insightComparisonRepository;
     private final OpenAiClient openAiClient;
     private final ObjectMapper objectMapper;
@@ -46,6 +49,10 @@ public class InsightService {
 
     public List<ReviewInsightItem> getCachedItems(String storeId) {
         return insightItemRepository.findByStoreIdOrderById(storeId);
+    }
+
+    public List<ReviewInsightKeypoint> getCachedKeypoints(String storeId) {
+        return insightKeypointRepository.findByStoreIdOrderById(storeId);
     }
 
     public List<ReviewInsightComparison> getCachedComparisons(String storeId, List<String> rivalIds) {
@@ -100,6 +107,18 @@ public class InsightService {
                 return item;
             }).toList();
             insightItemRepository.saveAll(items);
+        }
+
+        insightKeypointRepository.deleteByStoreId(storeId);
+        if (payload.key_points() != null) {
+            List<ReviewInsightKeypoint> keypoints = payload.key_points().stream().map(k -> {
+                ReviewInsightKeypoint kp = new ReviewInsightKeypoint();
+                kp.setStoreId(storeId);
+                kp.setIcon(k.icon());
+                kp.setText(k.text());
+                return kp;
+            }).toList();
+            insightKeypointRepository.saveAll(keypoints);
         }
 
         if (!rivals.isEmpty() && (payload.competitor_comparisons() == null || payload.competitor_comparisons().isEmpty())) {
@@ -214,8 +233,11 @@ public class InsightService {
               "positive_ratio": 0~100 사이 숫자 (긍정적인 리뷰의 비율, %),
               "negative_ratio": 0~100 사이 숫자 (부정적인 리뷰의 비율, %),
               "word_summary": "자주 등장한 단어 조합과 실제 리뷰 원문 내용을 근거로, 이 매장이 손님들에게 어떤 이미지로 기억되는지 3~5문장 분량으로 구체적이고 풍성하게 해석. 어떤 단어들이 왜 함께 묶이는지, 그게 어떤 손님층/방문 상황(데이트, 혼자 작업, 모임 등)과 연결되는지, 실제 리뷰에 나온 구체적인 메뉴명이나 공간 특징을 근거로 들어서 사장님이 마케팅 포인트로 바로 써먹을 수 있을 만큼 실질적으로 작성. 추상적인 미사여구로 끝내지 말고 왜 그렇게 판단했는지 근거를 문장 안에 녹여서 설명",
+              "key_points": [
+                {"icon": "어울리는 이모지 하나", "text": "word_summary의 핵심을 한 줄(15자 내외)로 압축한 문장"}
+              ],
               "insights": [
-                {"quote": "구체적인 개선 힌트가 담긴 리뷰 원문 인용 (짧게)", "suggestion": "그에 대한 한 줄 개선 제안"}
+                {"quote": "리뷰 원문 안에 실제로 아쉬움/불편함/애매함이 드러나는 문장만 그대로 인용 (짧게)", "suggestion": "quote에 실제로 적힌 내용에서 바로 이어지는 개선 제안 — quote에 없는 내용을 지어내면 안 됨"}
               ],
               "competitor_comparisons": [
                 {
@@ -228,7 +250,10 @@ public class InsightService {
             competitor_comparisons는 [비교할 경쟁 매장 정보]에 나온 매장마다 하나씩 반드시 만들어. 경쟁 매장 정보가 없으면 빈 배열로 응답해.
             strength와 difference는 특히 '실제 리뷰 원문'을 근거 삼아 구체적으로 써야 해 — 리뷰에 없는 내용을 지어내지 말고, 주어진 정보 안에서 최대한 실질적이고 사장님이 바로 이해할 수 있게 작성해.
             word_summary는 단어를 단순히 나열하지 말고, 그 조합이 암시하는 하나의 테마나 이미지로 종합해서 설명해.
-            insights는 최대 3개까지, 평점은 낮지 않아도 구체적인 불편함이나 개선 여지가 담긴 리뷰를 우선적으로 뽑아.
-            뽑을 만한 리뷰가 없으면 insights는 빈 배열로 응답해. 반드시 유효한 JSON만 출력하고 다른 설명은 하지 마.
+            key_points는 정확히 3개, 서로 다른 관점(예: 손님이 느끼는 분위기/감성, 자주 언급되는 메뉴, 주로 어떤 목적으로 방문하는지)에서 하나씩 뽑아 - word_summary를 읽지 않고 이 3줄만 봐도 매장 이미지가 바로 그려지게 짧고 구체적으로 작성해.
+            insights는 최대 3개까지, 평점은 낮지 않아도 리뷰 원문 안에 실제로 아쉬움·불편함·애매함·바람("~였으면", "그런데", "다만", "아쉬운" 등)이 명시적으로 드러나는 리뷰만 뽑아.
+            단순 칭찬이나 좋았다는 내용뿐인 리뷰를 억지로 골라서 있지도 않은 문제를 지어내지 마 — quote에 실제로 없는 불만을 suggestion에서 만들어내는 것은 절대 금지.
+            기준에 맞는 리뷰가 3개보다 적으면 그만큼만 담고, 하나도 없으면 insights는 빈 배열로 응답해. 개수를 채우려고 억지로 뽑지 마.
+            반드시 유효한 JSON만 출력하고 다른 설명은 하지 마.
             """;
 }

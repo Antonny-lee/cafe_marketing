@@ -39,7 +39,8 @@ public class CompareService {
             String vsDeltaText
     ) {}
 
-    public record PeerStats(long myReviewCount, double avgReviewCount, int percentileRank, int totalStores) {}
+    public record PeerStats(long myReviewCount, double avgReviewCount, int percentileRank, int totalStores,
+                             int avgPercentile, int rank) {}
 
     public record TagBar(String storeId, String storeName, int count, int widthPercent, boolean mine, int seriesIndex) {}
 
@@ -143,8 +144,12 @@ public class CompareService {
         double avg = counts.stream().mapToLong(Long::longValue).average().orElse(0);
         long below = counts.stream().filter(c -> c <= myCount).count();
         int percentile = counts.isEmpty() ? 0 : (int) Math.round(100.0 * below / counts.size());
+        long belowAvg = counts.stream().filter(c -> c <= avg).count();
+        int avgPercentile = counts.isEmpty() ? 0 : (int) Math.round(100.0 * belowAvg / counts.size());
+        long higherCount = counts.stream().filter(c -> c > myCount).count();
+        int rank = (int) higherCount + 1;
 
-        return new PeerStats(myCount, avg, percentile, counts.size());
+        return new PeerStats(myCount, avg, percentile, counts.size(), avgPercentile, rank);
     }
 
     private List<TagRow> buildTagComparison(StoreSummary mine, List<StoreSummary> rivals) {
