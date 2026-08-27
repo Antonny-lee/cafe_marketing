@@ -7,16 +7,24 @@
     <h1>장부</h1>
 
     <style>
-        .pl-strip { display:flex; align-items:center; background:var(--card); border:1px solid var(--border); border-radius:8px; padding:16px 8px; margin-bottom:18px; }
-        .pl-col { flex:1; display:flex; flex-direction:column; align-items:center; gap:5px; }
-        .pl-div { width:1px; height:34px; background:var(--border); flex-shrink:0; }
-        .pl-label { font-size:13px; color:var(--muted); display:flex; align-items:center; gap:6px; }
-        .pl-amt { font-family:'IBM Plex Mono', monospace; font-size:15px; font-weight:700; color:var(--ink); }
-        .pl-amt.down { color:var(--rust); }
-        .pl-amt.up { color:var(--accent-dark); }
-        .pl-amt.strong { font-size:18px; }
-        .pl-badge { font-size:14px; font-weight:700; color:#fff; background:var(--accent-dark); padding:2px 7px; border-radius:999px; margin-left:4px; }
-        .pl-badge.warn { background:var(--rust); }
+        .pl-strip { display:flex; align-items:center; background:var(--card); border:1px solid var(--border); border-radius:10px; padding:18px 12px; margin-bottom:18px; }
+        .pl-col { flex:1; display:flex; flex-direction:column; align-items:center; gap:6px; min-width:0; }
+        .pl-div { width:1px; height:42px; background:var(--border); flex-shrink:0; }
+        .pl-label { font-size:13.5px; font-weight:600; color:var(--muted); display:flex; align-items:center; gap:6px; }
+        .pl-amt { font-family:'IBM Plex Mono', monospace; font-size:19px; font-weight:700; color:var(--ink); letter-spacing:-0.3px; white-space:nowrap; }
+        .pl-amt.expense { color:var(--rust); }
+        .pl-amt.strong { font-size:22px; }
+        /* 주식 시세 표기: 흑자=빨강(상승), 적자=파랑(하락) */
+        .pl-amt.profit { color:#d32f2f; }
+        .pl-amt.loss { color:#1565c0; }
+        .pl-badge { font-size:12.5px; font-weight:700; color:#fff; background:#d32f2f; padding:2px 9px; border-radius:999px; margin-left:4px; }
+        .pl-badge.loss { background:#1565c0; }
+        @media (max-width:640px) {
+            .pl-strip { padding:14px 6px; }
+            .pl-amt { font-size:15.5px; }
+            .pl-amt.strong { font-size:17px; }
+            .pl-label { font-size:12px; }
+        }
 
         .ledger-tabs { display:flex; gap:8px; margin-bottom:20px; }
         .ledger-tabs a {
@@ -99,15 +107,15 @@
         <div class="pl-div"></div>
         <div class="pl-col">
             <span class="pl-label">지출</span>
-            <span class="pl-amt down" th:text="${#numbers.formatInteger(overview.monthExpense(),1,'COMMA')}">0</span>
+            <span class="pl-amt expense" th:text="${#numbers.formatInteger(overview.monthExpense(),1,'COMMA')}">0</span>
         </div>
         <div class="pl-div"></div>
         <div class="pl-col">
             <span class="pl-label">순이익
-                <span class="pl-badge" th:classappend="${overview.netProfit() < 0} ? 'warn' : ''"
+                <span class="pl-badge" th:classappend="${overview.netProfit() < 0} ? 'loss' : ''"
                       th:text="${overview.netProfit() >= 0} ? '흑자' : '적자'">흑자</span>
             </span>
-            <span class="pl-amt strong" th:classappend="${overview.netProfit() >= 0} ? 'up' : 'down'"
+            <span class="pl-amt strong" th:classappend="${overview.netProfit() >= 0} ? 'profit' : 'loss'"
                   th:text="${#numbers.formatInteger(overview.netProfit(),1,'COMMA')}">0</span>
         </div>
     </div>
@@ -175,8 +183,9 @@
                 </div>
             </div>
             <button type="button" id="dailySalesToggle" class="daily-toggle-btn" th:if="${#lists.size(dailySales) > 5}"
+                    th:attr="data-count=${#lists.size(dailySales)}"
                     th:text="'전체 보기 (' + ${#lists.size(dailySales)} + '건)'"
-                    onclick="document.getElementById('dailySalesList').classList.add('expanded'); this.remove();"></button>
+                    onclick="(function(btn){var list=document.getElementById('dailySalesList');var open=list.classList.toggle('expanded');btn.textContent=open?'접기':'전체 보기 ('+btn.dataset.count+'건)';if(!open){list.scrollIntoView({block:'nearest'});}})(this)"></button>
         </div>
 
         <div class="card">

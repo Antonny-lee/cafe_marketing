@@ -35,6 +35,7 @@ public class CompareController {
     public String form(@AuthenticationPrincipal UserDetails principal, HttpSession session,
                         @RequestParam(required = false) List<String> rivals,
                         @RequestParam(required = false) String analyzeError,
+                        @RequestParam(required = false) String analyzed,
                         Model model) {
         Optional<String> mineId = activeStoreResolver.resolve(principal, session);
         if (mineId.isEmpty()) {
@@ -48,6 +49,8 @@ public class CompareController {
         model.addAttribute("selectedMine", mineId.get());
         model.addAttribute("selectedRivals", rivalIds);
         model.addAttribute("analyzeError", analyzeError);
+        // "비교하기"를 눌러 분석이 한 번 실행된 뒤에만 종합 평가 이하 결과를 보여준다.
+        model.addAttribute("showResults", "1".equals(analyzed));
 
         model.addAttribute("result", compareService.compare(mineId.get(), rivalIds));
         model.addAttribute("insight", insightService.getCached(mineId.get()).orElse(null));
@@ -69,6 +72,8 @@ public class CompareController {
         List<String> rivalIds = cleanRivals(mine, rivals);
         UriComponentsBuilder redirect = UriComponentsBuilder.fromPath("/compare");
         rivalIds.forEach(r -> redirect.queryParam("rivals", r));
+        // 분석 성공/실패와 무관하게 결과 영역은 펼쳐 보여준다.
+        redirect.queryParam("analyzed", "1");
         try {
             insightService.analyze(mine, rivalIds);
         } catch (Exception e) {
